@@ -1,0 +1,43 @@
+---
+import { profile } from '../../settings'
+
+const { fullName } = profile
+---
+
+<footer class='bg-base-100 border-t border-base-300'>
+	<div class='max-w-6xl mx-auto px-6 py-12'>
+		<div class='flex flex-col items-center space-y-6'>
+			<!-- Main content -->
+			<div class='text-center space-y-4'>
+				<div class='text-base-content/80 text-sm'>
+					© {new Date().getFullYear()} {fullName}. All rights reserved.
+				</div>
+				
+				<!-- Powered by section -->
+				<div class='text-base-content/60 text-xs flex flex-col sm:flex-row items-center gap-1 sm:gap-2'>
+					<span>Powered by</span>
+					<div class='flex items-center gap-2'>
+						<a
+							href='https://github.com/maiobarbero/astro_academia'
+							class='text-primary hover:text-primary-focus transition-colors duration-200 font-medium underline decoration-1 underline-offset-2'
+							target='_blank'
+							rel='noopener noreferrer'
+						>
+							Astro Academia
+						</a>
+						<span class='text-base-content/40'>•</span>
+						<span>Created by</span>
+						<a
+							href='http://maiobarbero.dev'
+							class='text-primary hover:text-primary-focus transition-colors duration-200 font-medium underline decoration-1 underline-offset-2'
+							target='_blank'
+							rel='noopener noreferrer'
+						>
+							Matteo Barbero
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</footer>

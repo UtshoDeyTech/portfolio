@@ -1,0 +1,174 @@
+---
+import { template } from "@/settings"
+const { page } = Astro.props
+---
+
+<nav class="flex flex-col items-center gap-6 mt-12 mb-8" aria-label="Pagination Navigation">
+  <!-- Page Information -->
+  <div class="text-center">
+    <p class="text-sm text-base-content/70 mb-2">
+      Showing page <span class="font-semibold text-base-content">{page.currentPage}</span> 
+      of <span class="font-semibold text-base-content">{page.lastPage}</span>
+    </p>
+    {page.total && (
+      <p class="text-xs text-base-content/50">
+        {page.total} total items
+      </p>
+    )}
+  </div>
+
+  <!-- Navigation Controls -->
+  <div class="flex items-center gap-3">
+    <!-- Previous Button -->
+    <a
+      href={page.url.prev}
+      class:list={[
+        "group flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-300 border",
+        {
+          "text-base-content/40 border-base-200 cursor-not-allowed": !page.url.prev,
+          "text-base-content border-base-300 hover:border-primary hover:text-primary hover:bg-primary/5 hover:-translate-x-0.5 hover:shadow-lg": page.url.prev
+        }
+      ]}
+      aria-label="Go to previous page"
+      aria-disabled={!page.url.prev}
+    >
+      <svg 
+        class="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5" 
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span class="hidden sm:inline">Previous</span>
+    </a>
+
+    <!-- Page Indicator -->
+    <div class="flex items-center gap-2 px-4 py-3">
+      <div class="flex items-center gap-1">
+        {[...Array(Math.min(page.lastPage, 5))].map((_, i) => {
+          const pageNum = i + 1;
+          const isCurrentPage = pageNum === page.currentPage;
+          const isVisible = page.lastPage <= 5 || 
+                           pageNum === 1 || 
+                           pageNum === page.lastPage || 
+                           Math.abs(pageNum - page.currentPage) <= 1;
+          
+          if (!isVisible && pageNum !== 2 && pageNum !== page.lastPage - 1) {
+            return null;
+          }
+          
+          if (pageNum === 2 && page.currentPage > 3 && page.lastPage > 5) {
+            return <span class="text-base-content/40 px-1">...</span>;
+          }
+          
+          if (pageNum === page.lastPage - 1 && page.currentPage < page.lastPage - 2 && page.lastPage > 5) {
+            return <span class="text-base-content/40 px-1">...</span>;
+          }
+
+          return (
+            <div
+              class:list={[
+                "w-2 h-2 rounded-full transition-all duration-300",
+                {
+                  "bg-primary scale-125": isCurrentPage,
+                  "bg-base-300 hover:bg-base-400": !isCurrentPage
+                }
+              ]}
+              aria-label={`Page ${pageNum}${isCurrentPage ? ' (current)' : ''}`}
+            />
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- Next Button -->
+    <a
+      href={page.url.next}
+      class:list={[
+        "group flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-300 border",
+        {
+          "text-base-content/40 border-base-200 cursor-not-allowed": !page.url.next,
+          "text-base-content border-base-300 hover:border-primary hover:text-primary hover:bg-primary/5 hover:translate-x-0.5 hover:shadow-lg": page.url.next
+        }
+      ]}
+      aria-label="Go to next page"
+      aria-disabled={!page.url.next}
+    >
+      <span class="hidden sm:inline">Next</span>
+      <svg 
+        class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" 
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+    </a>
+  </div>
+
+  <!-- Advanced Navigation (for larger page counts) -->
+  {page.lastPage > 5 && (
+    <div class="flex items-center gap-3 mt-2">
+      <!-- First Page -->
+      {page.currentPage > 3 && (
+        <a
+          href={page.url.first || "/"}
+          class="text-xs text-base-content/70 hover:text-primary transition-colors duration-200 px-2 py-1 rounded hover:bg-primary/5"
+          aria-label="Go to first page"
+        >
+          First
+        </a>
+      )}
+
+      <!-- Jump Backward -->
+      {page.currentPage > 5 && (
+        <button
+          class="text-xs text-base-content/70 hover:text-primary transition-colors duration-200 px-2 py-1 rounded hover:bg-primary/5"
+          aria-label="Jump backward 5 pages"
+          onclick={`window.location.href = '${page.url.current?.replace(`/${page.currentPage}/`, `/${Math.max(1, page.currentPage - 5)}/`)}'`}
+        >
+          -5
+        </button>
+      )}
+
+      <!-- Current Page Display -->
+      <div class="text-xs font-mono bg-primary/10 text-primary px-3 py-1 rounded-full border border-primary/20">
+        {page.currentPage}
+      </div>
+
+      <!-- Jump Forward -->
+      {page.currentPage < page.lastPage - 4 && (
+        <button
+          class="text-xs text-base-content/70 hover:text-primary transition-colors duration-200 px-2 py-1 rounded hover:bg-primary/5"
+          aria-label="Jump forward 5 pages"
+          onclick={`window.location.href = '${page.url.current?.replace(`/${page.currentPage}/`, `/${Math.min(page.lastPage, page.currentPage + 5)}/`)}'`}
+        >
+          +5
+        </button>
+      )}
+
+      <!-- Last Page -->
+      {page.currentPage < page.lastPage - 2 && (
+        <a
+          href={page.url.last || `/${page.lastPage}/`}
+          class="text-xs text-base-content/70 hover:text-primary transition-colors duration-200 px-2 py-1 rounded hover:bg-primary/5"
+          aria-label="Go to last page"
+        >
+          Last
+        </a>
+      )}
+    </div>
+  )}
+
+  <!-- Progress Bar -->
+  <div class="w-full max-w-xs">
+    <div class="w-full bg-base-200 rounded-full h-1 overflow-hidden">
+      <div 
+        class="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500 ease-out"
+        style={`width: ${(page.currentPage / page.lastPage) * 100}%`}
+        aria-label={`Page ${page.currentPage} of ${page.lastPage} progress`}
+      ></div>
+    </div>
+  </div>
+</nav>

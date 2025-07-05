@@ -1,0 +1,162 @@
+---
+import { Image } from 'astro:assets'
+import {profile} from '../../settings'
+import SocialIcons from './SocialIcons.astro'
+import ProfilePictures from '@/assets/profile_pictures.jpg'
+import { getCollection } from 'astro:content'
+import { template } from '@/settings'
+
+const isBlogPopulated = await getCollection('blog').then(collection => collection.length > 0)
+
+const {fullName, title} = profile
+---
+<aside
+	class='navbar-container px-6 py-8 h-screen w-[22rem] bg-gradient-to-b from-base-300 to-base-200 border-r border-base-300 text-base-content flex flex-col shadow-2xl'
+	data-collapsed="false"
+>
+	<div class='flex flex-col justify-between h-full'>
+		<!-- Collapse Toggle Button -->
+		<div class='flex justify-end mb-4'>
+			<button 
+				id='collapse-toggle'
+				class='btn btn-ghost btn-sm opacity-60 hover:opacity-100 transition-opacity'
+				aria-label='Toggle sidebar'
+			>
+				<svg class='w-4 h-4 collapse-icon' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+					<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 19l-7-7 7-7m8 14l-7-7 7-7'></path>
+				</svg>
+			</button>
+		</div>
+
+		<!-- Profile Section -->
+		<div class='profile-section flex flex-col items-center text-center'>
+			<div class='relative group'>
+				<Image
+					class='size-32 rounded-full object-cover shadow-lg ring-4 ring-base-100 transition-transform duration-300 group-hover:scale-105'
+					src={ProfilePictures}
+					alt={`Profile picture of ${fullName}`}
+				/>
+				<div class='absolute inset-0 rounded-full bg-gradient-to-tr from-primary/20 to-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
+			</div>
+			
+			<div class='mt-6 space-y-2'>
+				<h1 class="text-2xl font-bold tracking-tight text-base-content">
+					{fullName}
+				</h1>
+				<p class="text-lg font-medium text-primary">
+					{title}
+				</p>
+				<div class='w-16 h-1 bg-gradient-to-r from-primary to-secondary rounded-full mx-auto'></div>
+			</div>
+		</div>
+
+		<!-- Navigation Section -->
+		<nav class='flex-1 mt-12'>
+			<ul class='space-y-2'>
+				<li>
+					<a 
+						href={`${template.base}/`} 
+						class='group flex items-center px-4 py-3 text-base font-medium rounded-lg text-base-content hover:bg-primary/10 hover:text-primary transition-all duration-200 ease-in-out'
+					>
+						<svg class='w-5 h-5 mr-3 text-base-content/60 group-hover:text-primary transition-colors' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'></path>
+						</svg>
+						<span class='nav-text'>Home</span>
+					</a>
+				</li>
+				<li>
+					<a 
+						href={`${template.base}/research`} 
+						class='group flex items-center px-4 py-3 text-base font-medium rounded-lg text-base-content hover:bg-primary/10 hover:text-primary transition-all duration-200 ease-in-out'
+					>
+						<svg class='w-5 h-5 mr-3 text-base-content/60 group-hover:text-primary transition-colors' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'></path>
+						</svg>
+						<span class='nav-text'>Research</span>
+					</a>
+				</li>
+				<li>
+					<a 
+						href={`${template.base}/papers`} 
+						class='group flex items-center px-4 py-3 text-base font-medium rounded-lg text-base-content hover:bg-primary/10 hover:text-primary transition-all duration-200 ease-in-out'
+					>
+						<svg class='w-5 h-5 mr-3 text-base-content/60 group-hover:text-primary transition-colors' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'></path>
+						</svg>
+						<span class='nav-text'>Papers</span>
+					</a>
+				</li>
+				<li>
+					<a 
+						href={`${template.base}/cv`} 
+						class='group flex items-center px-4 py-3 text-base font-medium rounded-lg text-base-content hover:bg-primary/10 hover:text-primary transition-all duration-200 ease-in-out'
+					>
+						<svg class='w-5 h-5 mr-3 text-base-content/60 group-hover:text-primary transition-colors' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+							<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'></path>
+						</svg>
+						<span class='nav-text'>CV</span>
+					</a>
+				</li>
+				{isBlogPopulated &&
+					<li>
+						<a 
+							href={`${template.base}/blog/1`} 
+							class='group flex items-center px-4 py-3 text-base font-medium rounded-lg text-base-content hover:bg-primary/10 hover:text-primary transition-all duration-200 ease-in-out'
+						>
+							<svg class='w-5 h-5 mr-3 text-base-content/60 group-hover:text-primary transition-colors' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+								<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'></path>
+							</svg>
+							<span class='nav-text'>Blog</span>
+						</a>
+					</li>
+				}
+			</ul>
+		</nav>
+
+		<!-- Social Icons Section -->
+		<div class='social-section mt-8 pt-6 border-t border-base-300'>
+			<div class='flex justify-center'>
+				<SocialIcons/>
+			</div>
+		</div>
+	</div>
+</aside>
+
+<style>
+	/* Collapsed state styles */
+	.navbar-container[data-collapsed="true"] {
+		width: 5rem !important;
+	}
+	
+	.navbar-container[data-collapsed="true"] .profile-section,
+	.navbar-container[data-collapsed="true"] .nav-text,
+	.navbar-container[data-collapsed="true"] .social-section {
+		opacity: 0;
+		pointer-events: none;
+	}
+	
+	.navbar-container[data-collapsed="true"] .collapse-icon {
+		transform: rotate(180deg);
+	}
+	
+	.navbar-container .profile-section,
+	.navbar-container .nav-text,
+	.navbar-container .social-section,
+	.navbar-container .collapse-icon {
+		transition: all 0.3s ease-in-out;
+	}
+</style>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		const collapseToggle = document.getElementById('collapse-toggle');
+		const navbarContainer = document.querySelector('.navbar-container');
+		
+		if (collapseToggle && navbarContainer) {
+			collapseToggle.addEventListener('click', function() {
+				const isCollapsed = navbarContainer.getAttribute('data-collapsed') === 'true';
+				navbarContainer.setAttribute('data-collapsed', (!isCollapsed).toString());
+			});
+		}
+	});
+</script>

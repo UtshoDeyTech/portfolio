@@ -1,0 +1,97 @@
+---
+import { Image } from 'astro:assets'
+import SocialIcons from './SocialIcons.astro'
+
+const {fullName, title, institute, profilePicture} = Astro.props
+---
+
+<section class='bg-base-100 py-16 px-6 lg:px-8'>
+  <div class='max-w-7xl mx-auto'>
+    <div class='grid lg:grid-cols-2 gap-12 lg:gap-16 items-center'>
+      <!-- Content Section -->
+      <div class='space-y-8 order-2 lg:order-1'>
+        <div class='space-y-6'>
+          <div>
+            <h1 class='text-5xl lg:text-6xl font-bold text-base-content leading-tight mb-4'>
+              <span class='block text-2xl lg:text-3xl font-medium text-base-content/70 mb-2'>
+                Welcome, I'm
+              </span>
+              <span class='text-primary'>
+                {fullName}
+              </span>
+            </h1>
+          </div>
+          
+          <div class='space-y-3'>
+            <p class='text-xl lg:text-2xl font-semibold text-base-content'>
+              {title}
+            </p>
+            {institute && (
+              <p class='text-lg text-base-content/70 flex items-center gap-2'>
+                <svg class='w-5 h-5 text-base-content/50' fill='currentColor' viewBox='0 0 20 20'>
+                  <path fill-rule='evenodd' d='M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z' clip-rule='evenodd'></path>
+                </svg>
+                {institute}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div class='prose prose-lg max-w-none'>
+          <p class='text-base-content/80 leading-relaxed'>
+            Brief impactful description of your research focus and academic mission.
+            Highlight your key contributions and areas of expertise that demonstrate
+            your commitment to advancing knowledge and innovation in your field.
+          </p>
+        </div>
+
+        <!-- Call-to-Action Section -->
+        <div class='space-y-6'>
+          <div class='flex flex-wrap gap-4'>
+            <button class='btn btn-primary btn-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300'>
+              View Research
+            </button>
+            <button class='btn btn-outline btn-lg transition-all duration-300'>
+              Download CV
+            </button>
+          </div>
+          
+          <!-- Social Icons -->
+          <div class='flex items-center gap-6 pt-4 border-t border-base-300'>
+            <span class='text-sm font-medium text-base-content/70 uppercase tracking-wide'>
+              Connect
+            </span>
+            <SocialIcons />
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Image Section -->
+      <div class='order-1 lg:order-2 flex justify-center lg:justify-end'>
+        <div class='relative'>
+          <!-- Background decoration -->
+          <div class='absolute inset-0 bg-primary/20 rounded-full blur-3xl opacity-30 scale-110'></div>
+          
+          <!-- Main image container -->
+          <div class='relative bg-base-100 p-2 rounded-full shadow-2xl ring-1 ring-base-300'>
+            <div class='w-80 h-80 lg:w-96 lg:h-96 relative overflow-hidden rounded-full bg-base-200'>
+              <Image
+                src={profilePicture}
+                alt={`Portrait of ${fullName}`}
+                class='w-full h-full object-cover object-center hover:scale-105 transition-transform duration-500'
+              />
+              
+              <!-- Overlay for hover effect -->
+              <div class='absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300'></div>
+            </div>
+          </div>
+
+          <!-- Decorative elements -->
+          <div class='absolute -top-4 -right-4 w-8 h-8 bg-primary rounded-full opacity-80'></div>
+          <div class='absolute -bottom-6 -left-6 w-12 h-12 bg-secondary rounded-full opacity-60'></div>
+          <div class='absolute top-1/2 -right-8 w-4 h-4 bg-accent rounded-full opacity-70'></div>
+        </div>
+      </div>
+    </div>
+
+</section>
