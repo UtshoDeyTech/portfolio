@@ -1,0 +1,42 @@
+# Blog Files Directory
+
+This folder contains all blog post markdown files.
+
+## How to add a new blog post:
+
+1. Create a new .md file in this folder (e.g., `my-blog-post.md`)
+2. Write your blog content in markdown format
+3. Add the blog metadata to `src/data/blogs.ts`
+4. Make sure the `file_name` in the metadata matches your .md file name
+
+## Markdown file example:
+
+```markdown
+# My Blog Post Title
+
+Published: January 15, 2025
+
+## Introduction
+
+Your introduction here...
+
+## Main Content
+
+Your main content with **bold text**, *italic text*, and more.
+
+### Code Examples
+
+```python
+def hello_world():
+    print("Hello, World!")
+```
+
+## Conclusion
+
+Your conclusion here...
+```
+
+## Note:
+- Files in this directory will be read and rendered on the blog page
+- Supports standard markdown syntax
+- Images can be referenced from `/public/images/blog/` folder

@@ -1,0 +1,54 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EducationCard from '../components/ui/EducationCard.astro';
+import { educationData } from '@/data/education';
+
+// Filter visible education items and sort by display_order
+const visibleEducation = educationData.education
+  .filter(item => item.is_visible !== false)
+  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+---
+
+<Layout>
+	<!-- Page Header -->
+	<section class='mb-12'>
+		<div class='flex items-center gap-4 mb-4'>
+			<div class='p-3 bg-primary/10 rounded-lg'>
+				<svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+					<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 14l9-5-9-5-9 5 9 5z'></path>
+					<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z'></path>
+					<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222'></path>
+				</svg>
+			</div>
+			<div>
+				<h1 class='text-4xl font-bold text-base-content'>Education</h1>
+				<p class='text-base-content/70 mt-2'>My academic journey and qualifications</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- Education Timeline -->
+	<section class='space-y-8'>
+		{visibleEducation.length > 0 ? (
+			visibleEducation.map((item) => (
+				<EducationCard item={item} />
+			))
+		) : (
+			<div class='text-center py-12 bg-base-200 rounded-lg'>
+				<svg class='w-16 h-16 mx-auto text-base-content/30 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+					<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'></path>
+				</svg>
+				<p class='text-base-content/60'>No education records available</p>
+			</div>
+		)}
+	</section>
+
+	<!-- Metadata Info (Optional - for debugging) -->
+	<!--
+	<section class='mt-12 pt-8 border-t border-base-300'>
+		<p class='text-xs text-base-content/40 text-center'>
+			Last updated: {new Date(educationData.metadata.updated_at).toLocaleDateString()}
+		</p>
+	</section>
+	-->
+</Layout>

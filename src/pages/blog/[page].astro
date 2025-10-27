@@ -1,73 +1,239 @@
 ---
-import Pagination from '@/components/ui/Pagination.astro'
-import Layout from '@/layouts/Layout.astro'
-import { trimExcerpt } from '@/lib/utils'
-import { template } from '@/settings'
-import { getCollection } from 'astro:content'
+import Layout from '@/layouts/Layout.astro';
+import BlogCard from '@/components/ui/BlogCard.astro';
+import Pagination from '@/components/ui/Pagination.astro';
+import { getPaginatedBlogs, getNewBlogs, getTopBlogs, blogsData } from '@/data/blogs';
 
-export async function getStaticPaths({ paginate }): Promise<Astro.getStaticPathsResult> {
-    const blogEntries = await getCollection("blog");
+export async function getStaticPaths({ paginate }) {
+  const allBlogs = getPaginatedBlogs(1, 1000).blogs; // Get all blogs
 
-    const posts = blogEntries
-        .map(post => ({
-            title: post.data.title,
-            date: post.data.date,
-            badge: post.data.tags[0],
-            excerpt: trimExcerpt(post.data.excerpt),
-            slug: `${template.base}/blog/${post.id}`,
-        }))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  if (allBlogs.length === 0) {
+    // If no blogs, create a single page showing empty state
+    return [
+      {
+        params: { page: '1' },
+        props: {
+          isEmpty: true,
+          currentPage: 1,
+          totalPages: 1,
+          blogs: [],
+          newBlogs: [],
+          topBlogs: []
+        }
+      }
+    ];
+  }
 
-    return paginate(posts, {
-        pageSize: template.postPerPage,
-    });
+  const postsPerPage = blogsData.metadata.posts_per_page;
+  const totalPages = Math.ceil(allBlogs.length / postsPerPage);
+
+  return Array.from({ length: totalPages }, (_, i) => {
+    const page = i + 1;
+    const paginatedData = getPaginatedBlogs(page, postsPerPage);
+
+    return {
+      params: { page: String(page) },
+      props: {
+        ...paginatedData,
+        isEmpty: false,
+        newBlogs: page === 1 ? getNewBlogs(3) : [],
+        topBlogs: page === 1 ? getTopBlogs(3) : [],
+      }
+    };
+  });
 }
-const { page } = Astro.props
+
+const { blogs, currentPage, totalPages, hasNextPage, hasPrevPage, isEmpty, newBlogs, topBlogs } = Astro.props;
+const isFirstPage = currentPage === 1;
 ---
 
-<Layout title='Blog'>
-    <div>
-		<h1 class='text-3xl font-bold mb-8'>Blog Posts</h1>
-		<div class='grid gap-8'>
-			{
-				page.data.map(post => (
-					<article class='card bg-base-200 transition-all'>
-						<div class='card-body'>
-							<div class='flex justify-between items-start'>
-								<h2 class='card-title text-xl'>
-                            <a href={post.slug} class='hover:text-accent'>
-										{post.title}
-									</a>
-								</h2>
-								<div class='badge badge-accent badge-outline p-4'>
-									{post.badge}
-								</div>
-							</div>
-							<time datetime={post.date} class='text-sm text-base-content/71'>
-								{new Date(post.date).toLocaleDateString('en-US', {
-									year: 'numeric',
-									month: 'long',
-									day: 'numeric',
-								})}
-							</time>
-							<p class='mt-4'>{post.excerpt}</p>
-							<div class='card-actions justify-end'>
-								<a
-                            href={post.slug}
-									class='btn btn-sm btn-secondary text-secondary-content'
-								>
-									Read More
-								</a>
-							</div>
-						</div>
-					</article>
-				))
-			}
-		</div>
-
-		<div class='flex justify-center mt-8'>
-			<Pagination page={page} />
-		</div>
+<Layout>
+  <!-- Page Header -->
+  <section class='mb-12'>
+    <div class='flex items-center gap-4 mb-6'>
+      <div class='p-3 bg-primary/10 rounded-lg'>
+        <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class='text-4xl font-bold text-base-content'>Blog</h1>
+        <p class='text-base-content/70 mt-2'>{blogsData.metadata.site_description}</p>
+      </div>
     </div>
+  </section>
 
+  {isEmpty ? (
+    <!-- Empty State: Show Future Topics -->
+    <section>
+      <div class='bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 rounded-2xl p-8 md:p-12 border border-primary/20 mb-12'>
+        <div class='text-center mb-8'>
+          <div class='inline-block p-4 bg-primary/10 rounded-full mb-4'>
+            <svg class='w-12 h-12 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'></path>
+            </svg>
+          </div>
+          <h2 class='text-3xl font-bold text-base-content mb-3'>Blog Coming Soon!</h2>
+          <p class='text-lg text-base-content/70 max-w-2xl mx-auto'>
+            I'm working on creating valuable content for developers and tech enthusiasts.
+            Here's what you can expect in the near future:
+          </p>
+        </div>
+
+        <!-- Future Topics Grid -->
+        <div class='grid grid-cols-1 md:grid-cols-2 gap-6 mt-8'>
+          {blogsData.future_topics.map((topic) => (
+            <div class='bg-base-100 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-base-300 group hover:border-primary/30'>
+              <div class='flex items-start gap-4'>
+                {topic.icon && (
+                  <div class='text-4xl group-hover:scale-110 transition-transform'>
+                    {topic.icon}
+                  </div>
+                )}
+                <div class='flex-1'>
+                  <h3 class='text-xl font-bold text-base-content mb-2 group-hover:text-primary transition-colors'>
+                    {topic.topic}
+                  </h3>
+                  <p class='text-sm text-base-content/70 leading-relaxed'>
+                    {topic.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <!-- Call to Action -->
+        <div class='mt-12 text-center'>
+          <div class='inline-flex items-center gap-2 bg-base-100 px-6 py-3 rounded-lg border border-base-300'>
+            <svg class='w-5 h-5 text-primary animate-pulse' fill='currentColor' viewBox='0 0 20 20'>
+              <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z' clip-rule='evenodd'></path>
+            </svg>
+            <span class='text-base-content font-medium'>
+              Stay tuned! New articles will be published regularly.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Social Links or Newsletter Signup (Optional) -->
+      <div class='bg-base-200 rounded-xl p-8 text-center border border-base-300'>
+        <h3 class='text-2xl font-bold text-base-content mb-3'>Want to be notified?</h3>
+        <p class='text-base-content/70 mb-6'>
+          Follow me on social media to get updates when new blog posts are published.
+        </p>
+        <div class='flex flex-wrap gap-3 justify-center'>
+          <a href='https://github.com/yourusername' target='_blank' class='btn btn-outline gap-2'>
+            <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
+              <path d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z'></path>
+            </svg>
+            GitHub
+          </a>
+          <a href='https://linkedin.com/in/yourusername' target='_blank' class='btn btn-outline gap-2'>
+            <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
+              <path d='M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z'></path>
+            </svg>
+            LinkedIn
+          </a>
+        </div>
+      </div>
+    </section>
+  ) : (
+    <>
+      <!-- New Blogs Section (Only on first page) -->
+      {isFirstPage && newBlogs.length > 0 && (
+        <section class='mb-12'>
+          <div class='flex items-center gap-2 mb-6'>
+            <svg class='w-6 h-6 text-primary' fill='currentColor' viewBox='0 0 20 20'>
+              <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z' clip-rule='evenodd'></path>
+            </svg>
+            <h2 class='text-2xl font-bold text-base-content'>New Blogs</h2>
+          </div>
+          <div class='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            {newBlogs.map((blog) => (
+              <BlogCard blog={blog} showExcerpt={false} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- Top Blogs Section (Only on first page) -->
+      {isFirstPage && topBlogs.length > 0 && (
+        <section class='mb-12'>
+          <div class='flex items-center gap-2 mb-6'>
+            <svg class='w-6 h-6 text-secondary' fill='currentColor' viewBox='0 0 20 20'>
+              <path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z'></path>
+            </svg>
+            <h2 class='text-2xl font-bold text-base-content'>Top Blogs</h2>
+          </div>
+          <div class='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            {topBlogs.map((blog) => (
+              <BlogCard blog={blog} showExcerpt={false} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <!-- All Blogs Section -->
+      <section class='mb-12'>
+        <div class='flex items-center justify-between mb-6'>
+          <h2 class='text-2xl font-bold text-base-content'>
+            {isFirstPage ? 'All Blog Posts' : `Blog Posts - Page ${currentPage}`}
+          </h2>
+          <span class='text-sm text-base-content/60'>
+            Showing {blogs.length} posts
+          </span>
+        </div>
+
+        <div class='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {blogs.map((blog) => (
+            <BlogCard blog={blog} />
+          ))}
+        </div>
+      </section>
+
+      <!-- Pagination -->
+      {totalPages > 1 && (
+        <section class='flex justify-center mt-12'>
+          <div class='join'>
+            {hasPrevPage && (
+              <a href={`/blog/${currentPage - 1}`} class='join-item btn btn-outline'>
+                «
+              </a>
+            )}
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <a
+                href={`/blog/${pageNum}`}
+                class={`join-item btn ${pageNum === currentPage ? 'btn-active' : 'btn-outline'}`}
+              >
+                {pageNum}
+              </a>
+            ))}
+
+            {hasNextPage && (
+              <a href={`/blog/${currentPage + 1}`} class='join-item btn btn-outline'>
+                »
+              </a>
+            )}
+          </div>
+        </section>
+      )}
+    </>
+  )}
 </Layout>
+
+<style>
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: .5;
+    }
+  }
+
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>

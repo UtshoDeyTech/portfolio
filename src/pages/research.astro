@@ -1,69 +1,205 @@
 ---
-import Layout from "@/layouts/Layout.astro";
-import { profile } from "@/settings";
-import BetterIcon from "@/components/ui/BetterIcon.astro";
-import List from "@/components/ui/List.astro";
-import {RESEARCH_ICONS} from "@/data/researchIcons";
+import Layout from '../layouts/Layout.astro';
+import ResearchCard from '../components/ui/ResearchCard.astro';
+import { researchData } from '@/data/research';
 
-const { research_areas } = profile;
+// Filter visible research publications and sort by display_order
+const visibleResearch = researchData.research_publications
+  .filter(item => item.is_visible !== false)
+  .sort((a, b) => {
+    // Sort by display_order first, then by publication_date (most recent first)
+    if (a.display_order !== b.display_order) {
+      return (a.display_order || 0) - (b.display_order || 0);
+    }
+    const dateA = a.publication_date || '0';
+    const dateB = b.publication_date || '0';
+    return dateB.localeCompare(dateA);
+  });
+
+// Count publications by type
+const publicationsByType = visibleResearch.reduce((acc, pub) => {
+  const type = pub.publication_type || 'Other';
+  acc[type] = (acc[type] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
+
+// Get all unique tags/research areas
+const allTags = Array.from(
+  new Set(
+    visibleResearch
+      .flatMap(p => p.tags || [])
+      .filter(tag => tag && tag.trim() !== '')
+  )
+).sort();
+
+// Get total citations
+const totalCitations = visibleResearch.reduce((sum, pub) => sum + (pub.citations || 0), 0);
+
+// Get most recent year
+const mostRecentYear = visibleResearch.length > 0
+  ? Math.max(...visibleResearch.map(p => {
+      const year = p.publication_date || '0';
+      return parseInt(year.substring(0, 4)) || 0;
+    }))
+  : new Date().getFullYear();
 ---
 
-<Layout title="Research | Dr. Marie Curie">
-  <div class="prose max-w-none">
-    <h1 class="text-3xl font-bold mb-8">Research Statement</h1>
+<Layout>
+  <!-- Page Header -->
+  <section class='mb-12'>
+    <div class='flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6'>
+      <div class='flex items-center gap-4'>
+        <div class='p-3 bg-primary/10 rounded-lg'>
+          <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class='text-4xl font-bold text-base-content'>Research & Publications</h1>
+          <p class='text-base-content/70 mt-2'>Academic contributions and scholarly work</p>
+        </div>
+      </div>
 
-    <div class="mb-12">
-      <p class="text-lg mb-6">
-        My research focuses on groundbreaking investigations into radioactivity and the discovery of new radioactive elements. Through meticulous experimental techniques and innovative methodologies, I aim to advance our understanding of radioactive phenomena and their applications in both physics and chemistry.
-      </p>
-      <p class="text-lg mb-6">
-        This interdisciplinary approach has led to significant discoveries, including the isolation of polonium and radium, contributing to the foundation of modern nuclear physics and radiochemistry.
-      </p>
-    </div>
+      <!-- Research Stats -->
+      <div class='flex flex-wrap gap-4'>
+        <div class='bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg px-6 py-4 text-center min-w-[100px]'>
+          <div class='text-3xl font-bold text-primary'>
+            {visibleResearch.length}
+          </div>
+          <div class='text-xs text-base-content/60 mt-1'>
+            Publications
+          </div>
+        </div>
 
-    <h2 class="text-2xl font-bold mb-6">Research Areas</h2>
-    <div class="grid gap-8 mb-12">
-      {
-        research_areas.map((area) => (
-          <div class="flex gap-6 items-start">
-            <BetterIcon>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke-width="2"
-                class="size-6 stroke-accent"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d={RESEARCH_ICONS[area.field as keyof typeof RESEARCH_ICONS]?.path || RESEARCH_ICONS['computer-science'].path}
-                />
-              </svg>
-            </BetterIcon>
-            <div>
-              <h3 class="text-xl font-semibold mb-2">{area.title}</h3>
-              <p class="text-base">{area.description}</p>
+        {totalCitations > 0 && (
+          <div class='bg-gradient-to-br from-success/10 to-success/5 border border-success/20 rounded-lg px-6 py-4 text-center min-w-[100px]'>
+            <div class='text-3xl font-bold text-success'>
+              {totalCitations}
+            </div>
+            <div class='text-xs text-base-content/60 mt-1'>
+              Citations
             </div>
           </div>
-        ))
-      }
+        )}
+
+        {allTags.length > 0 && (
+          <div class='bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-lg px-6 py-4 text-center min-w-[100px]'>
+            <div class='text-3xl font-bold text-secondary'>
+              {allTags.length}
+            </div>
+            <div class='text-xs text-base-content/60 mt-1'>
+              Research Areas
+            </div>
+          </div>
+        )}
+      </div>
     </div>
+  </section>
 
-    <List listTitle="Current Projects" listItems={[
-      {
-        title: "Radioactivity Studies",
-        description: "Investigation of radioactive properties in uranium minerals and isolation of new radioactive elements."
-      },
-      {
-        title: "Measurement Techniques",
-        description: "Development of precise methods for measuring radioactive emissions and their properties."
-      }
-    ]} />
+  <!-- Publication Types Overview -->
+  {Object.keys(publicationsByType).length > 1 && (
+    <section class='mb-8'>
+      <div class='bg-base-200 rounded-lg p-6 border border-base-300'>
+        <h2 class='text-lg font-semibold text-base-content mb-4 flex items-center gap-2'>
+          <svg class='w-5 h-5 text-primary' fill='currentColor' viewBox='0 0 20 20'>
+            <path d='M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z'></path>
+          </svg>
+          Publications by Type
+        </h2>
+        <div class='flex flex-wrap gap-3'>
+          {Object.entries(publicationsByType).map(([type, count]) => (
+            <div class='bg-base-100 px-4 py-2 rounded-lg border border-base-300 flex items-center gap-2'>
+              <span class='text-base-content/70 text-sm'>{type}</span>
+              <span class='badge badge-primary'>{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
 
-    <h2 class="text-2xl font-bold mb-6">Research Impact</h2>
-    <p class="text-lg mb-6">
-      My research has opened new frontiers in radioactivity studies, leading to practical applications in both scientific research and medical treatments. The discoveries have revolutionized our understanding of atomic structure and radioactive decay processes.
-    </p>
-  </div>
+  <!-- Research Publications List -->
+  <section class='space-y-8'>
+    {visibleResearch.length > 0 ? (
+      visibleResearch.map((publication) => (
+        <ResearchCard item={publication} />
+      ))
+    ) : (
+      <div class='text-center py-12 bg-base-200 rounded-lg'>
+        <svg class='w-16 h-16 mx-auto text-base-content/30 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'></path>
+        </svg>
+        <p class='text-base-content/60'>No research publications available</p>
+      </div>
+    )}
+  </section>
+
+  <!-- Research Areas / Tags Cloud -->
+  {allTags.length > 0 && (
+    <section class='mt-16 pt-12 border-t border-base-300'>
+      <h2 class='text-2xl font-bold text-base-content mb-6 flex items-center gap-2'>
+        <svg class='w-6 h-6 text-primary' fill='currentColor' viewBox='0 0 20 20'>
+          <path d='M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z'></path>
+        </svg>
+        Research Areas
+      </h2>
+
+      <div class='flex flex-wrap gap-3'>
+        {allTags.map((tag) => (
+          <span class='px-4 py-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-base-content text-sm font-medium rounded-lg hover:from-primary/20 hover:to-secondary/20 transition-all cursor-default border border-primary/20 shadow-sm'>
+            {tag}
+          </span>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- Call to Action (Optional) -->
+  {visibleResearch.length > 0 && (
+    <section class='mt-16 pt-12 border-t border-base-300'>
+      <div class='bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl p-8 text-center border border-primary/20'>
+        <h3 class='text-2xl font-bold text-base-content mb-3'>Interested in Collaboration?</h3>
+        <p class='text-base-content/70 mb-6 max-w-2xl mx-auto'>
+          I'm always open to research collaborations and academic discussions. Feel free to reach out if you're working on similar topics or would like to explore potential partnerships.
+        </p>
+        <div class='flex flex-wrap gap-3 justify-center'>
+          <a href='mailto:your.email@example.com' class='btn btn-primary gap-2'>
+            <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+            </svg>
+            Contact Me
+          </a>
+          <a href='https://scholar.google.com' target='_blank' rel='noopener noreferrer' class='btn btn-outline gap-2'>
+            <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
+              <path d='M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm0 1.846c5.595 0 10.154 4.559 10.154 10.154s-4.559 10.154-10.154 10.154-10.154-4.559-10.154-10.154 4.559-10.154 10.154-10.154zm-4.184 3.846l-3.231 3.231 7.415 4.615 7.231-7.231-3.23-3.231-4.001 4.001-4.184-1.385zm8.599 7.385l-4.415 4.415-4.415-4.415 4.415-2.769 4.415 2.769z'></path>
+            </svg>
+            Google Scholar
+          </a>
+        </div>
+      </div>
+    </section>
+  )}
 </Layout>
+
+<style>
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Optional: Add subtle animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  section {
+    animation: fadeIn 0.6s ease-out;
+  }
+</style>

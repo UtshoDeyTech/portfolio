@@ -1,37 +1,446 @@
 ---
-import Layout from '../layouts/Layout.astro'
+import Layout from '../layouts/Layout.astro';
+import { homeData } from '@/data/home';
+import { educationData } from '@/data/education';
+import { experienceData } from '@/data/experience';
+import { projectsData } from '@/data/projects';
+import { researchData } from '@/data/research';
+import { getNewBlogs } from '@/data/blogs';
 
-import { profile } from '@/settings'
-import { publications } from '@/data/cv'
-import ProfilePictures from '@/assets/profile_pictures.jpg'
-import Hero from '@/components/ui/Hero.astro'
-import Grid from '@/components/ui/Grid.astro'
-import ArticleList from '@/components/ui/ArticleList.astro'
+// Get latest/current data from each section
+const latestEducation = educationData.education
+  .filter(edu => edu.is_visible !== false)
+  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
 
-const { fullName, title, institute, research_areas } = profile
+const currentExperience = experienceData.experiences
+  .filter(exp => exp.is_visible !== false && exp.is_current === true)
+  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const featuredProjects = projectsData.projects
+  .filter(proj => proj.is_visible !== false && proj.is_featured === true)
+  .slice(0, 3);
+
+const latestResearch = researchData.research_publications
+  .filter(pub => pub.is_visible !== false)
+  .sort((a, b) => {
+    const dateA = a.publication_date || '0';
+    const dateB = b.publication_date || '0';
+    return dateB.localeCompare(dateA);
+  })
+  .slice(0, 2);
+
+const latestBlogs = getNewBlogs(3);
+
+const { hero, about, stats, skills, social_links, featured_sections } = homeData;
 ---
 
 <Layout>
-	<!-- Hero Section -->
-	<section class='flex items-center gap-12 border-b pb-12'>
-		<Hero
-			fullName={fullName}
-			title={title}
-			institute={institute}
-			profilePicture={ProfilePictures}
-		/>
-	</section>
+  <!-- Hero Section -->
+  <section class='mb-16'>
+    <div class='flex flex-col lg:flex-row items-center gap-12'>
+      <!-- Profile Image -->
+      <div class='flex-shrink-0'>
+        <div class='relative group'>
+          <div class='absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity'></div>
+          <img
+            src={hero.profile_image}
+            alt={hero.name}
+            class='relative w-64 h-64 rounded-full object-cover shadow-2xl ring-4 ring-primary/20 group-hover:scale-105 transition-transform duration-300'
+          />
+        </div>
+      </div>
 
-	<!-- Research Areas -->
-	<section class='py-12 border-b'>
-		<Grid gridTitle='Research Areas' gridItems={research_areas} />
-	</section>
+      <!-- Hero Content -->
+      <div class='flex-1 text-center lg:text-left'>
+        <h1 class='text-5xl lg:text-6xl font-bold text-base-content mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent'>
+          {hero.name}
+        </h1>
+        <p class='text-xl lg:text-2xl text-primary font-semibold mb-6'>
+          {hero.tagline}
+        </p>
+        <p class='text-base-content/80 text-lg mb-8 max-w-3xl'>
+          {hero.bio}
+        </p>
 
-	<!-- Recent Publications -->
-	<section class='py-12 border-t'>
-		<ArticleList listTitle='Recent Publications' listItems={publications} />
-	</section>
+        <!-- CTA Buttons -->
+        <div class='flex flex-wrap gap-4 justify-center lg:justify-start mb-8'>
+          {hero.cta_buttons.primary && (
+            <a href={hero.cta_buttons.primary.url} class='btn btn-primary btn-lg gap-2'>
+              <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path>
+              </svg>
+              {hero.cta_buttons.primary.text}
+            </a>
+          )}
+          {hero.cta_buttons.secondary && (
+            <a href={hero.cta_buttons.secondary.url} class='btn btn-outline btn-lg gap-2'>
+              <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+              </svg>
+              {hero.cta_buttons.secondary.text}
+            </a>
+          )}
+          {hero.resume_url && (
+            <a href={hero.resume_url} target='_blank' class='btn btn-outline btn-lg gap-2'>
+              <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'></path>
+              </svg>
+              Download Resume
+            </a>
+          )}
+        </div>
+
+        <!-- Social Links -->
+        <div class='flex gap-4 justify-center lg:justify-start'>
+          {social_links.github && (
+            <a href={social_links.github} target='_blank' rel='noopener noreferrer' class='btn btn-circle btn-ghost'>
+              <svg class='w-6 h-6' fill='currentColor' viewBox='0 0 24 24'>
+                <path d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z'></path>
+              </svg>
+            </a>
+          )}
+          {social_links.linkedin && (
+            <a href={social_links.linkedin} target='_blank' rel='noopener noreferrer' class='btn btn-circle btn-ghost'>
+              <svg class='w-6 h-6' fill='currentColor' viewBox='0 0 24 24'>
+                <path d='M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z'></path>
+              </svg>
+            </a>
+          )}
+          {social_links.email && (
+            <a href={`mailto:${social_links.email}`} class='btn btn-circle btn-ghost'>
+              <svg class='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+              </svg>
+            </a>
+          )}
+          {social_links.scholar && (
+            <a href={social_links.scholar} target='_blank' rel='noopener noreferrer' class='btn btn-circle btn-ghost'>
+              <svg class='w-6 h-6' fill='currentColor' viewBox='0 0 24 24'>
+                <path d='M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm0 1.846c5.595 0 10.154 4.559 10.154 10.154s-4.559 10.154-10.154 10.154-10.154-4.559-10.154-10.154 4.559-10.154 10.154-10.154zm-4.184 3.846l-3.231 3.231 7.415 4.615 7.231-7.231-3.23-3.231-4.001 4.001-4.184-1.385zm8.599 7.385l-4.415 4.415-4.415-4.415 4.415-2.769 4.415 2.769z'></path>
+              </svg>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  {Object.values(stats).some(val => val !== undefined) && (
+    <section class='mb-16'>
+      <div class='grid grid-cols-2 md:grid-cols-4 gap-6'>
+        {stats.years_of_experience && (
+          <div class='bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-6 text-center border border-primary/20 hover:shadow-lg transition-shadow'>
+            <div class='text-4xl font-bold text-primary mb-2'>{stats.years_of_experience}</div>
+            <div class='text-sm text-base-content/70'>Years Experience</div>
+          </div>
+        )}
+        {stats.projects_completed && (
+          <div class='bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-xl p-6 text-center border border-secondary/20 hover:shadow-lg transition-shadow'>
+            <div class='text-4xl font-bold text-secondary mb-2'>{stats.projects_completed}+</div>
+            <div class='text-sm text-base-content/70'>Projects Completed</div>
+          </div>
+        )}
+        {stats.publications && (
+          <div class='bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl p-6 text-center border border-accent/20 hover:shadow-lg transition-shadow'>
+            <div class='text-4xl font-bold text-accent mb-2'>{stats.publications}</div>
+            <div class='text-sm text-base-content/70'>Publications</div>
+          </div>
+        )}
+        {stats.technologies_used && (
+          <div class='bg-gradient-to-br from-success/10 to-success/5 rounded-xl p-6 text-center border border-success/20 hover:shadow-lg transition-shadow'>
+            <div class='text-4xl font-bold text-success mb-2'>{stats.technologies_used}+</div>
+            <div class='text-sm text-base-content/70'>Technologies</div>
+          </div>
+        )}
+      </div>
+    </section>
+  )}
+
+  <!-- About Section -->
+  <section class='mb-16'>
+    <div class='bg-base-200 rounded-2xl p-8 md:p-12 border border-base-300'>
+      <h2 class='text-3xl font-bold text-base-content mb-6 flex items-center gap-3'>
+        <svg class='w-8 h-8 text-primary' fill='currentColor' viewBox='0 0 20 20'>
+          <path fill-rule='evenodd' d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z' clip-rule='evenodd'></path>
+        </svg>
+        {about.title}
+      </h2>
+
+      <div class='space-y-4 mb-8'>
+        {about.paragraphs.map((paragraph) => (
+          <p class='text-base-content/80 leading-relaxed text-lg'>
+            {paragraph}
+          </p>
+        ))}
+      </div>
+
+      {about.highlights.length > 0 && (
+        <div class='bg-base-100 rounded-xl p-6 border border-base-300'>
+          <h3 class='text-xl font-semibold text-base-content mb-4'>Key Highlights</h3>
+          <ul class='space-y-3'>
+            {about.highlights.map((highlight) => (
+              <li class='flex items-start gap-3'>
+                <svg class='w-6 h-6 text-success flex-shrink-0 mt-0.5' fill='currentColor' viewBox='0 0 20 20'>
+                  <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z' clip-rule='evenodd'></path>
+                </svg>
+                <span class='text-base-content/80'>{highlight}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Current Position & Education -->
+  <section class='mb-16'>
+    <div class='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+      <!-- Current Position -->
+      {featured_sections.show_experience && currentExperience && (
+        <div class='bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 border border-primary/20'>
+          <div class='flex items-center gap-2 mb-4'>
+            <svg class='w-6 h-6 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+            </svg>
+            <h3 class='text-xl font-bold text-base-content'>Current Position</h3>
+          </div>
+          <div class='space-y-2'>
+            <p class='text-lg font-semibold text-primary'>{currentExperience.role}</p>
+            <p class='text-base-content/80'>{currentExperience.company_name}</p>
+            <p class='text-sm text-base-content/60'>{currentExperience.location} • {currentExperience.employment_type}</p>
+            <a href='/experience' class='inline-flex items-center gap-1 text-primary hover:underline mt-2'>
+              View All Experience
+              <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'></path>
+              </svg>
+            </a>
+          </div>
+        </div>
+      )}
+
+      <!-- Latest Education -->
+      {featured_sections.show_education && latestEducation && (
+        <div class='bg-gradient-to-br from-secondary/5 to-secondary/10 rounded-xl p-6 border border-secondary/20'>
+          <div class='flex items-center gap-2 mb-4'>
+            <svg class='w-6 h-6 text-secondary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 14l9-5-9-5-9 5 9 5z'></path>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z'></path>
+            </svg>
+            <h3 class='text-xl font-bold text-base-content'>Education</h3>
+          </div>
+          <div class='space-y-2'>
+            <p class='text-lg font-semibold text-secondary'>{latestEducation.degree}</p>
+            <p class='text-base-content/80'>{latestEducation.institution}</p>
+            {latestEducation.field_of_study && (
+              <p class='text-sm text-base-content/60'>{latestEducation.field_of_study}</p>
+            )}
+            <a href='/education' class='inline-flex items-center gap-1 text-secondary hover:underline mt-2'>
+              View All Education
+              <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'></path>
+              </svg>
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Skills Section -->
+  <section class='mb-16'>
+    <h2 class='text-3xl font-bold text-base-content mb-8 flex items-center gap-3'>
+      <svg class='w-8 h-8 text-primary' fill='currentColor' viewBox='0 0 20 20'>
+        <path d='M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z'></path>
+      </svg>
+      {skills.title}
+    </h2>
+
+    <div class='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+      {skills.categories.map((category) => (
+        <div class='bg-base-100 rounded-xl p-6 border border-base-300 hover:border-primary/30 transition-colors'>
+          <div class='flex items-center gap-3 mb-4'>
+            {category.icon && <span class='text-3xl'>{category.icon}</span>}
+            <h3 class='text-lg font-semibold text-base-content'>{category.name}</h3>
+          </div>
+          <div class='flex flex-wrap gap-2'>
+            {category.skills.map((skill) => (
+              <span class='px-3 py-1 bg-primary/10 text-primary text-sm rounded-full border border-primary/20 hover:bg-primary/20 transition-colors'>
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Featured Projects -->
+  {featured_sections.show_projects && featuredProjects.length > 0 && (
+    <section class='mb-16'>
+      <div class='flex items-center justify-between mb-8'>
+        <h2 class='text-3xl font-bold text-base-content flex items-center gap-3'>
+          <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path>
+          </svg>
+          Featured Projects
+        </h2>
+        <a href='/project' class='btn btn-outline btn-sm gap-2'>
+          View All
+          <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class='grid grid-cols-1 md:grid-cols-3 gap-6'>
+        {featuredProjects.map((project) => (
+          <div class='bg-base-100 rounded-xl p-6 border border-base-300 hover:shadow-xl transition-all hover:-translate-y-1'>
+            <h3 class='text-xl font-bold text-base-content mb-2 line-clamp-2'>{project.title}</h3>
+            {project.short_description && (
+              <p class='text-sm text-base-content/70 mb-4 line-clamp-3'>{project.short_description}</p>
+            )}
+            {project.tags && project.tags.length > 0 && (
+              <div class='flex flex-wrap gap-2 mb-4'>
+                {project.tags.slice(0, 3).map((tag) => (
+                  <span class='px-2 py-1 bg-secondary/10 text-secondary text-xs rounded-md'>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <a href={`/project#${project.id}`} class='text-primary hover:underline text-sm font-medium'>
+              Learn More →
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- Latest Research -->
+  {featured_sections.show_research && latestResearch.length > 0 && (
+    <section class='mb-16'>
+      <div class='flex items-center justify-between mb-8'>
+        <h2 class='text-3xl font-bold text-base-content flex items-center gap-3'>
+          <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'></path>
+          </svg>
+          Recent Research
+        </h2>
+        <a href='/research' class='btn btn-outline btn-sm gap-2'>
+          View All
+          <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class='space-y-6'>
+        {latestResearch.map((research) => (
+          <div class='bg-base-100 rounded-xl p-6 border border-base-300 hover:shadow-lg transition-shadow'>
+            <h3 class='text-lg font-bold text-base-content mb-2 line-clamp-2'>{research.title}</h3>
+            {research.authors && research.authors.length > 0 && (
+              <p class='text-sm text-base-content/60 mb-2 italic'>
+                {research.authors.slice(0, 3).join(', ')}
+                {research.authors.length > 3 && ', et al.'}
+              </p>
+            )}
+            {research.description && (
+              <p class='text-sm text-base-content/70 mb-3 line-clamp-2'>{research.description}</p>
+            )}
+            {research.tags && research.tags.length > 0 && (
+              <div class='flex flex-wrap gap-2'>
+                {research.tags.slice(0, 4).map((tag) => (
+                  <span class='px-2 py-1 bg-primary/10 text-primary text-xs rounded'>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- Latest Blog Posts -->
+  {featured_sections.show_blog && latestBlogs.length > 0 && (
+    <section class='mb-16'>
+      <div class='flex items-center justify-between mb-8'>
+        <h2 class='text-3xl font-bold text-base-content flex items-center gap-3'>
+          <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'></path>
+          </svg>
+          Latest Blog Posts
+        </h2>
+        <a href='/blog/1' class='btn btn-outline btn-sm gap-2'>
+          View All
+          <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class='grid grid-cols-1 md:grid-cols-3 gap-6'>
+        {latestBlogs.map((blog) => (
+          <div class='bg-base-100 rounded-xl overflow-hidden border border-base-300 hover:shadow-xl transition-all hover:-translate-y-1'>
+            {blog.cover_image && (
+              <img src={blog.cover_image} alt={blog.title} class='w-full h-40 object-cover' />
+            )}
+            <div class='p-6'>
+              <h3 class='text-lg font-bold text-base-content mb-2 line-clamp-2'>{blog.title}</h3>
+              {blog.description && (
+                <p class='text-sm text-base-content/70 mb-3 line-clamp-2'>{blog.description}</p>
+              )}
+              <div class='flex items-center justify-between text-xs text-base-content/60'>
+                {blog.published_date && <span>{blog.published_date}</span>}
+                {blog.read_time && <span>{blog.read_time} min read</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- Call to Action -->
+  <section class='mt-16'>
+    <div class='bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-2xl p-12 text-center border border-primary/20'>
+      <h2 class='text-3xl font-bold text-base-content mb-4'>Let's Work Together</h2>
+      <p class='text-lg text-base-content/70 mb-8 max-w-2xl mx-auto'>
+        I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.
+      </p>
+      <div class='flex flex-wrap gap-4 justify-center'>
+        <a href={`mailto:${social_links.email}`} class='btn btn-primary btn-lg gap-2'>
+          <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+          </svg>
+          Get In Touch
+        </a>
+        <a href='/project' class='btn btn-outline btn-lg gap-2'>
+          <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path>
+          </svg>
+          View Portfolio
+        </a>
+      </div>
+    </div>
+  </section>
 </Layout>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>
