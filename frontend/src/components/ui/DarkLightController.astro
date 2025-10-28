@@ -1,5 +1,8 @@
 ---
-import {template} from  '../../settings.ts'
+export interface Props {
+    template: any;
+}
+const { template } = Astro.props;
 ---
 
 <label class="grid cursor-pointer place-items-center" transition:persist>

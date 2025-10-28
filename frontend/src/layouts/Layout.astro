@@ -7,7 +7,24 @@ import Navbar from '../components/ui/Navbar.astro'
 import Head from '../components/Head.astro'
 import FloatingSocialIcons from '../components/ui/FloatingSocialIcons.astro'
 
-import { seo, profile, template } from '../settings'
+import { getProfile, getSiteSettings, getSocialLinks } from '../lib/api';
+
+const profile = await getProfile();
+const siteSettings = await getSiteSettings();
+const social = await getSocialLinks();
+
+const template = {
+    base: siteSettings.base,
+    menu_left: siteSettings.menu_left,
+    transitions: siteSettings.transitions,
+    darkTheme: siteSettings.dark_theme,
+};
+
+const seo = {
+    default_title: siteSettings.default_title,
+    default_description: siteSettings.default_description,
+    default_image: siteSettings.default_image,
+}
 import Footer from '../components/ui/Footer.astro'
 
 type Props = {
@@ -38,10 +55,9 @@ const {
 				<div class='bg-base-100 z-50 text-base-content shadow-sm'>
 					<nav class='navbar'>
 						<div class='navbar-start'>
-							{template.menu_left &&
-								<DarkLightController/>
-							}
-							<label for='my-drawer' class='btn btn-square btn-ghost lg:hidden'>
+							                                {template.menu_left &&
+							                                                                <DarkLightController template={template}/>
+							                                }							<label for='my-drawer' class='btn btn-square btn-ghost lg:hidden'>
 								<BetterIcon>
 									<svg
 										xmlns='http://www.w3.org/2000/svg'
@@ -64,7 +80,7 @@ const {
 						</div>
 						<div class='navbar-end'>
 							{!template.menu_left &&
-								<DarkLightController/>
+								<DarkLightController template={template} />
 							}
 						</div>
 					</nav>
@@ -72,21 +88,21 @@ const {
                 <main class='main-content p-8 pt-10 lg:pt-16 lg:max-w-5xl max-w-full mx-auto min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out'>
 					<!-- Page content -->
 					<slot />
-				<Footer />
+				<Footer profile={profile} />
 				</main>
 			</div>
 			<!-- Drawer side -->
 			<div class='drawer-side z-40'>
 				<label for='my-drawer' aria-label='close sidebar' class='drawer-overlay'
 				></label>
-				<Navbar />
+				<Navbar profile={profile} template={template} social={social} />
 			</div>
 		</div>
 
 		<!-- Floating Social Icons (shows when navbar is collapsed) -->
 		<div id='floating-social' class='floating-social-container'>
 			<div class='floating-social-content'>
-				<FloatingSocialIcons />
+				<FloatingSocialIcons social={social} />
 			</div>
 		</div>
 	</body>

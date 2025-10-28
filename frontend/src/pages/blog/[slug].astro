@@ -1,25 +1,23 @@
----
-import Layout from '@/layouts/Layout.astro'
-import {template} from '@/settings'
-import {getCollection, render} from 'astro:content'
+import Layout from '@/layouts/Layout.astro';
+import { getBlogs, getBlogBySlug } from '../../lib/api';
+import { marked } from 'marked';
 
-export async function getStaticPaths(): Promise<Array<{ params: { slug: string }, props: { post: any } }>> {
-    const blogEntries = await getCollection("blog");
-
-    const posts = blogEntries
-        .map(post => {
-        const slug = post.id
-            return {
-            params: { slug },
-            props: { post },
-            }
-    })
-    return posts
+export async function getStaticPaths() {
+    const blogs = await getBlogs();
+    const paths = blogs.map(blog => ({
+        params: { slug: blog.slug },
+    }));
+    return paths;
 }
-const {post} = Astro.props;
-const { title, date, tags} = post.data; 
-const { Content } = await render(post);
----
+
+const { slug } = Astro.params;
+const post = await getBlogBySlug(slug);
+const { title, published_date, tags, file_name } = post;
+
+// Read the markdown file content
+const res = await fetch(new URL(`/public/all_blogs_files/${file_name}`, Astro.site));
+const text = await res.text();
+const html = marked(text);
 
 <Layout title={title}>
 	<div class='max-w-4xl mx-auto'>
@@ -83,7 +81,7 @@ const { Content } = await render(post);
          prose-li:mb-2
          prose-img:rounded-lg prose-img:my-8'
         >
-                <Content />
+                <div set:html={html}></div>
 			</div>
 		</article>
 	</div>

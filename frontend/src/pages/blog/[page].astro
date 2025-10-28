@@ -2,10 +2,11 @@
 import Layout from '@/layouts/Layout.astro';
 import BlogCard from '@/components/ui/BlogCard.astro';
 import Pagination from '@/components/ui/Pagination.astro';
-import { getPaginatedBlogs, getNewBlogs, getTopBlogs, blogsData } from '@/data/blogs';
+import { getBlogs, getSiteSettings } from '../../lib/api';
 
 export async function getStaticPaths({ paginate }) {
-  const allBlogs = getPaginatedBlogs(1, 1000).blogs; // Get all blogs
+  const allBlogs = await getBlogs();
+  const siteSettings = await getSiteSettings();
 
   if (allBlogs.length === 0) {
     // If no blogs, create a single page showing empty state
@@ -24,17 +25,26 @@ export async function getStaticPaths({ paginate }) {
     ];
   }
 
-  const postsPerPage = blogsData.metadata.posts_per_page;
+  const postsPerPage = siteSettings.post_per_page || 5;
   const totalPages = Math.ceil(allBlogs.length / postsPerPage);
+
+  const getNewBlogs = (limit) => allBlogs.slice(0, limit);
+  const getTopBlogs = (limit) => allBlogs.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, limit);
 
   return Array.from({ length: totalPages }, (_, i) => {
     const page = i + 1;
-    const paginatedData = getPaginatedBlogs(page, postsPerPage);
+    const startIndex = (page - 1) * postsPerPage;
+    const endIndex = startIndex + postsPerPage;
+    const blogs = allBlogs.slice(startIndex, endIndex);
 
     return {
       params: { page: String(page) },
       props: {
-        ...paginatedData,
+        blogs,
+        currentPage: page,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
         isEmpty: false,
         newBlogs: page === 1 ? getNewBlogs(3) : [],
         topBlogs: page === 1 ? getTopBlogs(3) : [],
@@ -45,6 +55,54 @@ export async function getStaticPaths({ paginate }) {
 
 const { blogs, currentPage, totalPages, hasNextPage, hasPrevPage, isEmpty, newBlogs, topBlogs } = Astro.props;
 const isFirstPage = currentPage === 1;
+const siteSettings = await getSiteSettings();
+const blogsData = {
+    metadata: {
+        site_description: siteSettings.default_description,
+    },
+    future_topics: [
+        {
+          "topic": "Machine Learning & AI",
+          "description": "Deep dives into ML algorithms, LLM integration, prompt engineering, and practical AI applications in real-world projects.",
+          "icon": "🤖"
+        },
+        {
+          "topic": "Backend Development",
+          "description": "Best practices for building scalable backend systems with Python, FastAPI, Spring Boot, microservices architecture, and database optimization.",
+          "icon": "⚙️"
+        },
+        {
+          "topic": "Cloud & DevOps",
+          "description": "Tutorials on Docker, Kubernetes, CI/CD pipelines, AWS services, and modern deployment strategies.",
+          "icon": "☁️"
+        },
+        {
+          "topic": "System Design",
+          "description": "Exploring distributed systems, scalability patterns, database design, and architectural decisions for enterprise applications.",
+          "icon": "🏗️"
+        },
+        {
+          "topic": "Full Stack Development",
+          "description": "End-to-end development guides covering frontend frameworks (React), backend APIs, database management, and deployment.",
+          "icon": "💻"
+        },
+        {
+          "topic": "Data Science & Analytics",
+          "description": "Data preprocessing, visualization, statistical analysis, and building recommendation systems.",
+          "icon": "📊"
+        },
+        {
+          "topic": "Software Engineering Best Practices",
+          "description": "Code quality, testing strategies, design patterns, SOLID principles, and maintaining clean codebases.",
+          "icon": "✨"
+        },
+        {
+          "topic": "Career & Learning",
+          "description": "Tips for career growth in tech, learning resources, interview preparation, and navigating the software engineering landscape.",
+          "icon": "🚀"
+        }
+    ]
+};
 ---
 
 <Layout>

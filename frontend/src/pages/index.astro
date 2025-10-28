@@ -1,37 +1,124 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { homeData } from '@/data/home';
-import { educationData } from '@/data/education';
-import { experienceData } from '@/data/experience';
-import { projectsData } from '@/data/projects';
-import { researchData } from '@/data/research';
-import { getNewBlogs } from '@/data/blogs';
+import { getHomeSection, getEducation, getExperience, getProjects, getResearch, getBlogs, getProfile, getSocialLinks } from '../lib/api';
+
+const [homeData, educationData, experienceData, projectsData, researchData, blogsData, profileData, socialLinksData] = await Promise.all([
+    getHomeSection(),
+    getEducation(),
+    getExperience(),
+    getProjects(),
+    getResearch(),
+    getBlogs(),
+    getProfile(),
+    getSocialLinks()
+]);
 
 // Get latest/current data from each section
-const latestEducation = educationData.education
+const latestEducation = educationData
   .filter(edu => edu.is_visible !== false)
   .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
 
-const currentExperience = experienceData.experiences
+const currentExperience = experienceData
   .filter(exp => exp.is_visible !== false && exp.is_current === true)
   .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
 
-const featuredProjects = projectsData.projects
-  .filter(proj => proj.is_visible !== false && proj.is_featured === true)
-  .slice(0, 3);
+const featuredProjects = projectsData
+  .filter(proj => proj.is_visible !== false)
+  .slice(0, 3)
+  .map(proj => ({...proj, tags: JSON.parse(proj.tags)}));
 
-const latestResearch = researchData.research_publications
+const latestResearch = researchData
   .filter(pub => pub.is_visible !== false)
   .sort((a, b) => {
     const dateA = a.publication_date || '0';
     const dateB = b.publication_date || '0';
     return dateB.localeCompare(dateA);
   })
-  .slice(0, 2);
+  .slice(0, 2)
+  .map(pub => ({...pub, authors: JSON.parse(pub.authors), tags: JSON.parse(pub.tags)}));
 
-const latestBlogs = getNewBlogs(3);
+const latestBlogs = blogsData.slice(0, 3).map(blog => ({...blog, tags: JSON.parse(blog.tags), categories: JSON.parse(blog.categories)}));
 
-const { hero, about, stats, skills, social_links, featured_sections } = homeData;
+const { hero, about, stats, skills, social_links, featured_sections } = {
+    hero: {
+        name: homeData.name,
+        tagline: homeData.tagline,
+        bio: homeData.description,
+        profile_image: homeData.profile_image,
+        resume_url: '/resume.pdf',
+        cta_buttons: {
+            primary: {
+                text: homeData.cta_text,
+                url: homeData.cta_link,
+            },
+            secondary: {
+                text: 'Contact Me',
+                url: `mailto:${socialLinksData.email}`,
+            }
+        }
+    },
+    about: {
+        title: 'About Me',
+        paragraphs: [
+            profileData.descriptions,
+        ],
+        highlights: [
+            "Designed and deployed microservices architecture handling 100K+ requests",
+            "Reduced system latency by 40% through optimization techniques",
+            "Built AI-powered document intelligence platform serving enterprise clients",
+            "Published research in Springer Nature conference proceedings"
+        ]
+    },
+    stats: {
+        years_of_experience: "2+",
+        projects_completed: projectsData.length,
+        publications: researchData.length,
+        technologies_used: 25
+    },
+    skills: {
+        title: "Technical Skills",
+        categories: [
+          {
+            "name": "Backend Development",
+            "icon": "⚙️",
+            "skills": ["Python", "Java", "Spring Boot", "FastAPI", "Node.js", "Microservices", "REST APIs", "GraphQL"]
+          },
+          {
+            "name": "AI & Machine Learning",
+            "icon": "🤖",
+            "skills": ["OpenAI", "LangChain", "TensorFlow", "Scikit-learn", "Pinecone", "Prompt Engineering", "LLM Integration"]
+          },
+          {
+            "name": "Databases",
+            "icon": "🗄️",
+            "skills": ["PostgreSQL", "MySQL", "MongoDB", "Redis", "Oracle", "Vector Databases"]
+          },
+          {
+            "name": "Cloud & DevOps",
+            "icon": "☁️",
+            "skills": ["Docker", "Kubernetes", "AWS", "Azure", "CI/CD", "Git", "Linux"]
+          },
+          {
+            "name": "Frontend",
+            "icon": "🎨",
+            "skills": ["React", "TypeScript", "Tailwind CSS", "HTML/CSS", "Responsive Design"]
+          },
+          {
+            "name": "Tools & Others",
+            "icon": "🛠️",
+            "skills": ["RabbitMQ", "Celery", "OAuth2.0", "Stripe", "Supabase", "PyQt"]
+          }
+        ]
+    },
+    social_links: socialLinksData,
+    featured_sections: {
+        show_experience: true,
+        show_education: true,
+        show_projects: true,
+        show_research: true,
+        show_blog: true
+    }
+};
 ---
 
 <Layout>

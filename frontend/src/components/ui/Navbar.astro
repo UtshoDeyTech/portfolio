@@ -1,11 +1,16 @@
 ---
-import { Image } from 'astro:assets'
-import {profile} from '../../settings'
-import SocialIcons from './SocialIcons.astro'
-import ProfilePictures from '@/assets/profile_pictures.jpg'
-import { template } from '@/settings'
+import { Image } from 'astro:assets';
+import SocialIcons from './SocialIcons.astro';
+import ProfilePictures from '@/assets/profile_pictures.jpg';
 
-const {fullName, title} = profile
+export interface Props {
+    profile: any;
+    template: any;
+    social: any;
+}
+
+const { profile, template, social } = Astro.props;
+const {fullName, title} = profile;
 ---
 <aside
 	id='navbar-aside'
@@ -126,7 +131,7 @@ const {fullName, title} = profile
 		<!-- Social Icons Section -->
 		<div class='social-section mt-8 pt-6 border-t border-base-300'>
 			<div class='flex justify-center'>
-				<SocialIcons/>
+				<SocialIcons social={social}/>
 			</div>
 		</div>
 	</div>

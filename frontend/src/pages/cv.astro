@@ -1,6 +1,42 @@
 ---
 import Layout from '@/layouts/Layout.astro'
-import { experiences, education, skills, publications } from '../data/cv'
+import { getExperience, getEducation, getResearch } from '../lib/api';
+import CvTimeline from '@/components/ui/CvTimeline.astro';
+
+import type { Experience, Education, Publication } from '../types/cv';
+import List from '@/components/ui/List.astro';
+import PublicationsList from '@/components/ui/PublicationsList.astro';
+
+const experienceData = await getExperience();
+const educationData = await getEducation();
+const researchData = await getResearch();
+
+const experiences = experienceData.map(exp => ({
+    company: exp.company_name,
+    time: `${exp.start_date} - ${exp.end_date || 'Present'}`,
+    title: exp.role,
+    location: exp.location,
+    description: exp.description,
+}));
+
+const education = educationData.map(edu => ({
+    school: edu.institution,
+    time: `${edu.start_date} - ${edu.end_date || 'Present'}`,
+    degree: edu.degree,
+    location: edu.location,
+    description: edu.description,
+}));
+
+const publications = researchData.map(pub => ({
+    title: pub.title,
+    authors: pub.authors.join(', '),
+    journal: pub.book,
+    time: pub.publication_date,
+    link: pub.url,
+    abstract: pub.description,
+}));
+
+const skills = experienceData.flatMap(exp => exp.skills).filter((skill, index, self) => self.indexOf(skill) === index).map(skill => ({ title: skill, description: '' }));
 import CvTimeline from '@/components/ui/CvTimeline.astro'
 
 import type { Experience, Education, Publication } from '../types/cv'

@@ -1,10 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import EducationCard from '../components/ui/EducationCard.astro';
-import { educationData } from '@/data/education';
+import { getEducation } from '../lib/api';
 
-// Filter visible education items and sort by display_order
-const visibleEducation = educationData.education
+const visibleEducation = (await getEducation())
   .filter(item => item.is_visible !== false)
   .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 ---

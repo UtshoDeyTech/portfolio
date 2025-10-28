@@ -4,6 +4,8 @@ FROM node:20-alpine
 # Set work directory
 WORKDIR /app
 
+RUN apk add --no-cache curl
+
 # Install dependencies
 COPY package*.json ./
 RUN npm ci

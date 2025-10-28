@@ -1,10 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ProjectCard from '../components/ui/ProjectCard.astro';
-import { projectsData } from '@/data/projects';
+import { getProjects } from '../lib/api';
+
+const projects = await getProjects();
 
 // Filter visible projects and sort by display_order
-const visibleProjects = projectsData.projects
+const visibleProjects = projects
   .filter(item => item.is_visible !== false)
   .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 

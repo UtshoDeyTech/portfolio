@@ -1,5 +1,8 @@
 ---
-import {social} from '../../settings'
+export interface Props {
+    social: any;
+}
+const { social } = Astro.props;
 
 const activeSocial = Object.keys(social).filter((key) => social[key as keyof typeof social] !== '')
 const calculatedIconSize = 'size-5'

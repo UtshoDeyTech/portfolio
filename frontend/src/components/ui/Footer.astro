@@ -1,7 +1,9 @@
 ---
-import { profile } from '../../settings'
-
-const { fullName } = profile
+export interface Props {
+    profile: any;
+}
+const { profile } = Astro.props;
+const { fullName } = profile;
 ---
 
 <footer class='bg-base-100 border-t border-base-300'>

@@ -48,31 +48,31 @@ class SiteSettingsViewSet(viewsets.ReadOnlyModelViewSet):
 
 class EducationViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint for education entries"""
-    queryset = Education.objects.filter(is_visible=True)
+    queryset = Education.objects.filter(is_visible=True).order_by('display_order', '-start_date')
     serializer_class = EducationSerializer
 
 
 class ExperienceViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint for experience entries"""
-    queryset = Experience.objects.filter(is_visible=True)
+    queryset = Experience.objects.filter(is_visible=True).order_by('display_order', '-start_date')
     serializer_class = ExperienceSerializer
 
 
 class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint for project entries"""
-    queryset = Project.objects.filter(is_visible=True)
+    queryset = Project.objects.filter(is_visible=True).order_by('display_order', '-start_date')
     serializer_class = ProjectSerializer
 
 
 class ResearchViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint for research publications"""
-    queryset = Research.objects.filter(is_visible=True)
+    queryset = Research.objects.filter(is_visible=True).order_by('display_order', '-publication_date')
     serializer_class = ResearchSerializer
 
 
 class BlogViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint for blog posts"""
-    queryset = Blog.objects.filter(is_visible=True)
+    queryset = Blog.objects.filter(is_visible=True).order_by('display_order', '-published_date')
     serializer_class = BlogSerializer
     lookup_field = 'slug'
 

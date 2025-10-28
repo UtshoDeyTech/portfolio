@@ -1,10 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ExperienceCard from '../components/ui/ExperienceCard.astro';
-import { experienceData } from '@/data/experience';
+import { getExperience } from '../lib/api';
 
 // Filter visible experience items and sort by display_order
-const visibleExperiences = experienceData.experiences
+const visibleExperiences = (await getExperience())
   .filter(item => item.is_visible !== false)
   .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 

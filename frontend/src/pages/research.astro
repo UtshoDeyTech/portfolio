@@ -1,10 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ResearchCard from '../components/ui/ResearchCard.astro';
-import { researchData } from '@/data/research';
+import { getResearch } from '../lib/api';
 
 // Filter visible research publications and sort by display_order
-const visibleResearch = researchData.research_publications
+const visibleResearch = (await getResearch())
   .filter(item => item.is_visible !== false)
   .sort((a, b) => {
     // Sort by display_order first, then by publication_date (most recent first)
