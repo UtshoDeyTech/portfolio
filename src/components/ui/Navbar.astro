@@ -8,8 +8,10 @@ import { template } from '@/settings'
 const {fullName, title} = profile
 ---
 <aside
-	class='navbar-container px-6 py-8 h-screen w-[22rem] bg-gradient-to-b from-base-300 to-base-200 border-r border-base-300 text-base-content flex flex-col shadow-2xl'
+	id='navbar-aside'
+	class='navbar-container px-6 py-8 h-screen w-[22rem] bg-gradient-to-b from-base-300 to-base-200 border-r border-base-300 text-base-content flex flex-col shadow-2xl overflow-visible'
 	data-collapsed="false"
+	transition:persist="navbar"
 >
 	<div class='flex flex-col justify-between h-full'>
 		<!-- Collapse Toggle Button -->
@@ -27,16 +29,16 @@ const {fullName, title} = profile
 
 		<!-- Profile Section -->
 		<div class='profile-section flex flex-col items-center text-center'>
-			<div class='relative group'>
+			<div class='relative group profile-image-container'>
 				<Image
-					class='size-32 rounded-full object-cover shadow-lg ring-4 ring-base-100 transition-transform duration-300 group-hover:scale-105'
+					class='profile-image size-32 rounded-full object-cover shadow-lg ring-4 ring-base-100 transition-all duration-300 group-hover:scale-105'
 					src={ProfilePictures}
 					alt={`Profile picture of ${fullName}`}
 				/>
 				<div class='absolute inset-0 rounded-full bg-gradient-to-tr from-primary/20 to-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300'></div>
 			</div>
-			
-			<div class='mt-6 space-y-2'>
+
+			<div class='mt-6 space-y-2 profile-text'>
 				<h1 class="text-2xl font-bold tracking-tight text-base-content">
 					{fullName}
 				</h1>
@@ -131,40 +133,172 @@ const {fullName, title} = profile
 </aside>
 
 <style>
+	/* Base styles */
+	.navbar-container {
+		transition: width 0.3s ease-in-out;
+		overflow-x: hidden;
+	}
+
 	/* Collapsed state styles */
 	.navbar-container[data-collapsed="true"] {
 		width: 5rem !important;
+		padding-left: 0.5rem !important;
+		padding-right: 0.5rem !important;
 	}
-	
-	.navbar-container[data-collapsed="true"] .profile-section,
-	.navbar-container[data-collapsed="true"] .nav-text,
+
+	/* Show small profile icon when collapsed */
+	.navbar-container[data-collapsed="true"] .profile-section {
+		margin-top: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.navbar-container[data-collapsed="true"] .profile-image {
+		width: 2.5rem !important;
+		height: 2.5rem !important;
+		ring-width: 2px !important;
+	}
+
+	/* Hide profile text when collapsed */
+	.navbar-container[data-collapsed="true"] .profile-text {
+		display: none !important;
+	}
+
+	/* Hide text labels when collapsed */
+	.navbar-container[data-collapsed="true"] .nav-text {
+		display: none !important;
+	}
+
+	/* Hide social section when collapsed */
 	.navbar-container[data-collapsed="true"] .social-section {
-		opacity: 0;
-		pointer-events: none;
+		display: none !important;
 	}
-	
+
+	/* Adjust nav spacing when collapsed */
+	.navbar-container[data-collapsed="true"] nav {
+		margin-top: 1rem !important;
+		flex: 1;
+	}
+
+	/* Center and style navigation links when collapsed */
+	.navbar-container[data-collapsed="true"] nav ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.navbar-container[data-collapsed="true"] nav li {
+		width: 100%;
+	}
+
+	.navbar-container[data-collapsed="true"] nav a {
+		display: flex !important;
+		justify-content: center !important;
+		align-items: center !important;
+		padding: 0.75rem !important;
+		margin: 0 !important;
+		width: 100%;
+	}
+
+	/* Icon styling when collapsed */
+	.navbar-container[data-collapsed="true"] nav svg {
+		margin: 0 !important;
+		width: 1.5rem !important;
+		height: 1.5rem !important;
+		flex-shrink: 0;
+	}
+
+	/* Rotate collapse icon */
 	.navbar-container[data-collapsed="true"] .collapse-icon {
 		transform: rotate(180deg);
 	}
-	
-	.navbar-container .profile-section,
+
+	/* Smooth transitions */
+	.navbar-container .profile-section {
+		transition: all 0.3s ease-in-out;
+	}
+
+	.navbar-container .profile-image {
+		transition: all 0.3s ease-in-out;
+	}
+
+	.navbar-container .profile-text,
 	.navbar-container .nav-text,
-	.navbar-container .social-section,
+	.navbar-container .social-section {
+		transition: opacity 0.2s ease-in-out;
+	}
+
 	.navbar-container .collapse-icon {
+		transition: transform 0.3s ease-in-out;
+	}
+
+	nav a {
+		transition: all 0.3s ease-in-out;
+	}
+
+	nav svg {
 		transition: all 0.3s ease-in-out;
 	}
 </style>
 
+<script is:inline>
+	// Apply saved state immediately - works for initial page load
+	(function() {
+		try {
+			const savedState = localStorage.getItem('navbar-collapsed');
+
+			function applyState() {
+				const navbar = document.getElementById('navbar-aside') || document.querySelector('.navbar-container');
+				if (navbar) {
+					if (savedState === 'true') {
+						navbar.setAttribute('data-collapsed', 'true');
+					} else {
+						navbar.setAttribute('data-collapsed', 'false');
+					}
+				}
+			}
+
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', applyState);
+			} else {
+				applyState();
+			}
+		} catch (e) {
+			console.error('Navbar: Error loading state:', e);
+		}
+	})();
+</script>
+
 <script>
-	document.addEventListener('DOMContentLoaded', function() {
+	// Handle toggle button clicks - supports View Transitions
+	function initNavbarToggle() {
 		const collapseToggle = document.getElementById('collapse-toggle');
-		const navbarContainer = document.querySelector('.navbar-container');
-		
+		const navbarContainer = document.getElementById('navbar-aside') || document.querySelector('.navbar-container');
+
 		if (collapseToggle && navbarContainer) {
-			collapseToggle.addEventListener('click', function() {
+			// Always load and apply saved state on every page load
+			const savedState = localStorage.getItem('navbar-collapsed');
+			if (savedState === 'true') {
+				navbarContainer.setAttribute('data-collapsed', 'true');
+			} else {
+				navbarContainer.setAttribute('data-collapsed', 'false');
+			}
+
+			// Remove old event listeners to prevent duplicates
+			const newToggle = collapseToggle.cloneNode(true);
+			collapseToggle.parentNode.replaceChild(newToggle, collapseToggle);
+
+			// Add toggle handler to new button
+			newToggle.addEventListener('click', function() {
 				const isCollapsed = navbarContainer.getAttribute('data-collapsed') === 'true';
-				navbarContainer.setAttribute('data-collapsed', (!isCollapsed).toString());
+				const newState = (!isCollapsed).toString();
+				navbarContainer.setAttribute('data-collapsed', newState);
+				localStorage.setItem('navbar-collapsed', newState);
 			});
 		}
-	});
+	}
+
+	// Initialize on both initial load and View Transitions navigation
+	document.addEventListener('DOMContentLoaded', initNavbarToggle);
+	document.addEventListener('astro:page-load', initNavbarToggle);
+	document.addEventListener('astro:after-swap', initNavbarToggle);
 </script>
