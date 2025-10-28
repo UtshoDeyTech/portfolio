@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend-static:/app/staticfiles
+      - backend-media:/app/media
+    environment:
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - DATABASE_NAME=/app/db.sqlite3
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: portfolio-frontend
+    ports:
+      - "4321:4321"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - API_URL=http://backend:8000/api
+      - HOST=0.0.0.0
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-static:
+  backend-media:

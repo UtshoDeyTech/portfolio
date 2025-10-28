@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(if [ ! -f \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\frontend\\package.json\" ])",
+      "Bash(then cp -r \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\src\" \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\public\" \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\package.json\" \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\tsconfig.json\" \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\astro.config.mjs\" \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\tailwind.config.mjs\" \"C:\\Users\\User\\OneDrive\\Desktop\\portfolio\\frontend/\")",
+      "Bash(else echo \"Frontend files already exist\")",
+      "Bash(fi)",
+      "Bash(powershell -Command \"Remove-Item -Path ''node_modules'' -Recurse -Force\")",
+      "Bash(pip install:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(taskkill:*)",
+      "Bash(docker-compose exec:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
