@@ -44,98 +44,9 @@ export interface EducationData {
   education: EducationItem[];
 }
 
-export const educationData: EducationData = {
-  "metadata": {
-    "created_at": "2025-10-27T21:00:00Z",
-    "updated_at": "2025-10-27T21:00:00Z"
-  },
-  "education": [
-    {
-      "institution": "BRAC University",
-      "degree": "Master's degree",
-      "field_of_study": "Computer Science",
-      "education_type": "Graduate",
-      "start_date": "Mar 2024",
-      "end_date": "Aug 2025",
-      "grade": "3.75",
-      "grade_scale": "4.00",
-      "location": "Dhaka, Bangladesh",
-      "is_current": true,
-      "institution_logo_url": "https://upload.wikimedia.org/wikipedia/en/thumb/4/40/BRAC_University_monogram.svg/1024px-BRAC_University_monogram.svg.png",
-      "description": "Specializing in advanced topics such as Machine Learning, Cloud Computing, and Distributed Systems.",
-      "achievements": [
-        "Maintained CGPA 3.75",
-        "Conducted research on decentralized recommendation systems"
-      ],
-      "certificate_url": "",
-      "is_visible": true,
-      "display_order": 1
-    },
-    {
-      "institution": "BRAC University",
-      "degree": "Bachelor's degree",
-      "field_of_study": "Computer Science",
-      "education_type": "Undergraduate",
-      "start_date": "Apr 2019",
-      "end_date": "Dec 2022",
-      "grade": "3.70",
-      "grade_scale": "4.00",
-      "location": "Dhaka, Bangladesh",
-      "is_current": false,
-      "institution_logo_url": "https://upload.wikimedia.org/wikipedia/en/thumb/4/40/BRAC_University_monogram.svg/1024px-BRAC_University_monogram.svg.png",
-      "description": "Focused on software engineering, artificial intelligence, and backend development.",
-      "achievements": [
-        "Graduated with First Class Honors",
-        "Developed a Decentralized Movie Recommendation System as final year project"
-      ],
-      "certificate_url": "",
-      "is_visible": true,
-      "display_order": 2
-    },
-    {
-      "institution": "Khulna Public College",
-      "degree": "Higher Secondary Certificate",
-      "field_of_study": "Science",
-      "education_type": "Higher Secondary",
-      "start_date": "May 2015",
-      "end_date": "Apr 2017",
-      "grade": "5.00",
-      "grade_scale": "5.00",
-      "location": "Khulna, Bangladesh",
-      "is_current": false,
-      "institution_logo_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Logo_of_Khulna_Public_College.jpg/330px-Logo_of_Khulna_Public_College.jpg",
-      "description": "Completed HSC with distinction in Science group.",
-      "achievements": ["Awarded Board Scholarship for academic excellence"],
-      "certificate_url": "",
-      "is_visible": true,
-      "display_order": 3
-    },
-    {
-      "institution": "Noapara Model Secondary School",
-      "degree": "Secondary School Certificate",
-      "field_of_study": "Science",
-      "education_type": "Secondary",
-      "start_date": "Jan 2003",
-      "end_date": "Feb 2015",
-      "grade": "5.00",
-      "grade_scale": "5.00",
-      "location": "Noapara, Bangladesh",
-      "is_current": false,
-      "institution_logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5fWBAixXX-n2KyD3cOjbhKxM_yVP1pctxsA&s",
-      "description": "Completed SSC with top grades in Science group.",
-      "achievements": ["Secured GPA 5.00 with distinction in all subjects"],
-      "certificate_url": "",
-      "is_visible": true,
-      "display_order": 4
-    }
-  ]
-  ,
-  "page": {
-    "title": "Education",
-    "subtitle": "My academic journey and qualifications",
-    "empty_text": "No education records available"
-  }
-};
+import siteData from './site-data.json';
+
+export const educationData: EducationData = (siteData as any).educationData;
 
 /**
  * Helper: getVisibleEducation
@@ -144,7 +55,7 @@ export const educationData: EducationData = {
  */
 export const getVisibleEducation = (): EducationItem[] => {
   return educationData.education
-    .filter(item => item.is_visible !== false)
+    .filter((item) => item.is_visible !== false)
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 };
 
