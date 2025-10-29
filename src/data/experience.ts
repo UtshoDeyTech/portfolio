@@ -37,6 +37,15 @@ export interface ExperienceData {
     created_at: string;
     updated_at: string;
   };
+  page?: {
+    title?: string;
+    subtitle?: string;
+    stats_labels?: {
+      years_experience?: string;
+      current_positions?: string;
+    };
+    skills_heading?: string;
+  };
   experiences: ExperienceItem[];
 }
 
@@ -286,6 +295,16 @@ export const experienceData: ExperienceData = {
       "updated_at": "2025-10-27T21:15:00Z"
     }
   ]
+  ,
+  "page": {
+    "title": "Professional Experience",
+    "subtitle": "My career journey and professional accomplishments",
+    "stats_labels": {
+      "years_experience": "Years Experience",
+      "current_positions": "Current Position(s)"
+    },
+    "skills_heading": "All Skills Across Experiences"
+  }
 };
 
 /**

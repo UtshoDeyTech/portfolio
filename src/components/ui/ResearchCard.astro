@@ -42,6 +42,7 @@ const data = {
   hasPdfUrl: hasData(item.pdf_url),
   hasGithubUrl: hasData(item.github_url),
   hasDoi: hasData(item.doi),
+  hasCoverImage: hasData((item as any).cover_image),
   hasCitations: hasData(item.citations),
 };
 
@@ -77,6 +78,11 @@ const getTypeColor = (): string => {
 
 <article class='research-card bg-base-100 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-t-4 border-primary/70 border-2 border-base-300 overflow-hidden mb-6'>
   <div class='p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4'>
+    {data.hasCoverImage && (
+      <div class='w-full h-44 overflow-hidden rounded-lg mb-3'>
+        <img src={(item as any).cover_image} alt={item.title ?? 'Research image'} class='w-full h-full object-cover' />
+      </div>
+    )}
     {/* Title */}
     {data.hasTitle && (
       <h3 class='text-lg sm:text-2xl md:text-3xl font-extrabold text-base-content leading-snug'>

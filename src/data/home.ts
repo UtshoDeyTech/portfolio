@@ -46,6 +46,12 @@ export interface HomeData {
     email?: string;
     scholar?: string;
   };
+  cta?: {
+    title?: string;
+    paragraph?: string;
+    primary?: { text: string; url: string };
+    secondary?: { text: string; url: string };
+  };
   featured_sections: {
     show_experience: boolean;
     show_education: boolean;
@@ -137,6 +143,13 @@ export const homeData: HomeData = {
     "linkedin": "https://www.linkedin.com/in/utshodey/",
     "email": "utshodey@example.com",
     "scholar": "https://scholar.google.com"
+  },
+
+  "cta": {
+    "title": "Let's Work Together",
+    "paragraph": "I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.",
+    "primary": { "text": "Get In Touch", "url": "mailto:utshodey@example.com" },
+    "secondary": { "text": "View Portfolio", "url": "/project" }
   },
 
   "featured_sections": {

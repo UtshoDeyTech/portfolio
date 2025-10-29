@@ -40,12 +40,32 @@ export interface ResearchPublication {
   github_url?: string;                  // GitHub repository
   doi?: string;                         // Digital Object Identifier
   citations?: number;                   // Citation count
+  cover_image?: string;                 // Optional cover/thumbnail image URL
   is_visible?: boolean;                 // Set to false to hide this entry (default: true)
   display_order?: number;               // Order of display (lower numbers appear first)
 }
 
 export interface ResearchData {
   research_publications: ResearchPublication[];
+  page?: {
+    title?: string;
+    subtitle?: string;
+    stats_labels?: {
+      publications?: string;
+      citations?: string;
+      research_areas?: string;
+    };
+    publications_by_type_title?: string;
+    no_publications_text?: string;
+    research_areas_title?: string;
+    cta?: {
+      title?: string;
+      paragraph?: string;
+      contact_email?: string;
+      scholar_url?: string;
+      scholar_text?: string;
+    };
+  };
 }
 
 export const researchData: ResearchData = {
@@ -88,6 +108,8 @@ export const researchData: ResearchData = {
       "url": "https://scholar.google.com/scholar?cluster=1234567890",
       "is_visible": true,
       "display_order": 1
+    ,
+      "cover_image": "/images/research/skin_cancer.jpg"
     },
     {
       "id": "house_price_prediction",
@@ -134,8 +156,30 @@ export const researchData: ResearchData = {
       "url": "https://link.springer.com/chapter/10.xxxxxxx",
       "is_visible": true,
       "display_order": 2
+    ,
+      "cover_image": "/images/research/house_price.jpg"
     }
   ]
+  ,
+  "page": {
+    "title": "Research & Publications",
+    "subtitle": "Academic contributions and scholarly work",
+    "stats_labels": {
+      "publications": "Publications",
+      "citations": "Citations",
+      "research_areas": "Research Areas"
+    },
+    "publications_by_type_title": "Publications by Type",
+    "no_publications_text": "No research publications available",
+    "research_areas_title": "Research Areas",
+    "cta": {
+      "title": "Interested in Collaboration?",
+      "paragraph": "I'm always open to research collaborations and academic discussions. Feel free to reach out if you're working on similar topics or would like to explore potential partnerships.",
+      "contact_email": "your.email@example.com",
+      "scholar_url": "https://scholar.google.com",
+      "scholar_text": "Google Scholar"
+    }
+  }
 };
 
 /**

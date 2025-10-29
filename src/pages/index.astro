@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { homeData } from '@/data/home';
+import ProfilePictures from '@/assets/profile_pictures.jpg';
 import { educationData } from '@/data/education';
 import { experienceData } from '@/data/experience';
 import { projectsData } from '@/data/projects';
@@ -31,7 +32,10 @@ const latestResearch = researchData.research_publications
 
 const latestBlogs = getNewBlogs(3);
 
-const { hero, about, stats, skills, social_links, featured_sections } = homeData;
+const { hero, about, stats, skills, social_links, featured_sections, cta } = homeData;
+// Resolve profile image: prefer explicit data path unless it points to /images/ which isn't present in this repo.
+const resolvedProfileImport = (typeof ProfilePictures === 'string') ? ProfilePictures : (ProfilePictures && ProfilePictures.src) ? ProfilePictures.src : '';
+const profileSrc = (hero && hero.profile_image && !hero.profile_image.startsWith('/images')) ? hero.profile_image : resolvedProfileImport;
 ---
 
 <Layout>
@@ -43,7 +47,7 @@ const { hero, about, stats, skills, social_links, featured_sections } = homeData
         <div class='relative group'>
           <div class='absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity'></div>
           <img
-            src={hero.profile_image}
+            src={profileSrc}
             alt={hero.name}
             class='relative w-64 h-64 rounded-full object-cover shadow-2xl ring-4 ring-primary/20 group-hover:scale-105 transition-transform duration-300'
           />
@@ -407,23 +411,42 @@ const { hero, about, stats, skills, social_links, featured_sections } = homeData
   <!-- Call to Action -->
   <section class='mt-16'>
     <div class='bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-2xl p-12 text-center border border-primary/20'>
-      <h2 class='text-3xl font-bold text-base-content mb-4'>Let's Work Together</h2>
+      <h2 class='text-3xl font-bold text-base-content mb-4'>{cta?.title ?? "Let's Work Together"}</h2>
       <p class='text-lg text-base-content/70 mb-8 max-w-2xl mx-auto'>
-        I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.
+        {cta?.paragraph ?? "I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision."}
       </p>
       <div class='flex flex-wrap gap-4 justify-center'>
-        <a href={`mailto:${social_links.email}`} class='btn btn-primary btn-lg gap-2'>
-          <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
-          </svg>
-          Get In Touch
-        </a>
-        <a href='/project' class='btn btn-outline btn-lg gap-2'>
-          <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path>
-          </svg>
-          View Portfolio
-        </a>
+        {cta?.primary ? (
+          <a href={cta.primary.url} class='btn btn-primary btn-lg gap-2'>
+            <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+            </svg>
+            {cta.primary.text}
+          </a>
+        ) : (
+          <a href={`mailto:${social_links.email}`} class='btn btn-primary btn-lg gap-2'>
+            <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+            </svg>
+            Get In Touch
+          </a>
+        )}
+
+        {cta?.secondary ? (
+          <a href={cta.secondary.url} class='btn btn-outline btn-lg gap-2'>
+            <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path>
+            </svg>
+            {cta.secondary.text}
+          </a>
+        ) : (
+          <a href='/project' class='btn btn-outline btn-lg gap-2'>
+            <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'></path>
+            </svg>
+            View Portfolio
+          </a>
+        )}
       </div>
     </div>
   </section>

@@ -42,6 +42,9 @@ const mostRecentYear = visibleResearch.length > 0
       return parseInt(year.substring(0, 4)) || 0;
     }))
   : new Date().getFullYear();
+
+const page = researchData.page || {};
+
 ---
 
 <Layout>
@@ -55,8 +58,8 @@ const mostRecentYear = visibleResearch.length > 0
           </svg>
         </div>
         <div>
-          <h1 class='text-4xl font-bold text-base-content'>Research & Publications</h1>
-          <p class='text-base-content/70 mt-2'>Academic contributions and scholarly work</p>
+          <h1 class='text-4xl font-bold text-base-content'>{page.title ?? 'Research & Publications'}</h1>
+          <p class='text-base-content/70 mt-2'>{page.subtitle ?? 'Academic contributions and scholarly work'}</p>
         </div>
       </div>
 
@@ -67,7 +70,7 @@ const mostRecentYear = visibleResearch.length > 0
             {visibleResearch.length}
           </div>
           <div class='text-xs text-base-content/60 mt-1'>
-            Publications
+            {page.stats_labels?.publications ?? 'Publications'}
           </div>
         </div>
 
@@ -77,7 +80,7 @@ const mostRecentYear = visibleResearch.length > 0
               {totalCitations}
             </div>
             <div class='text-xs text-base-content/60 mt-1'>
-              Citations
+              {page.stats_labels?.citations ?? 'Citations'}
             </div>
           </div>
         )}
@@ -88,7 +91,7 @@ const mostRecentYear = visibleResearch.length > 0
               {allTags.length}
             </div>
             <div class='text-xs text-base-content/60 mt-1'>
-              Research Areas
+              {page.stats_labels?.research_areas ?? 'Research Areas'}
             </div>
           </div>
         )}
@@ -104,7 +107,7 @@ const mostRecentYear = visibleResearch.length > 0
           <svg class='w-5 h-5 text-primary' fill='currentColor' viewBox='0 0 20 20'>
             <path d='M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z'></path>
           </svg>
-          Publications by Type
+          {page.publications_by_type_title ?? 'Publications by Type'}
         </h2>
         <div class='flex flex-wrap gap-3'>
           {Object.entries(publicationsByType).map(([type, count]) => (
@@ -129,7 +132,7 @@ const mostRecentYear = visibleResearch.length > 0
         <svg class='w-16 h-16 mx-auto text-base-content/30 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
           <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'></path>
         </svg>
-        <p class='text-base-content/60'>No research publications available</p>
+  <p class='text-base-content/60'>{page.no_publications_text ?? 'No research publications available'}</p>
       </div>
     )}
   </section>
@@ -141,7 +144,7 @@ const mostRecentYear = visibleResearch.length > 0
         <svg class='w-6 h-6 text-primary' fill='currentColor' viewBox='0 0 20 20'>
           <path d='M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z'></path>
         </svg>
-        Research Areas
+  {page.research_areas_title ?? 'Research Areas'}
       </h2>
 
       <div class='flex flex-wrap gap-3'>
@@ -158,22 +161,22 @@ const mostRecentYear = visibleResearch.length > 0
   {visibleResearch.length > 0 && (
     <section class='mt-16 pt-12 border-t border-base-300'>
       <div class='bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 rounded-xl p-8 text-center border border-primary/20'>
-        <h3 class='text-2xl font-bold text-base-content mb-3'>Interested in Collaboration?</h3>
+        <h3 class='text-2xl font-bold text-base-content mb-3'>{page.cta?.title ?? 'Interested in Collaboration?'}</h3>
         <p class='text-base-content/70 mb-6 max-w-2xl mx-auto'>
-          I'm always open to research collaborations and academic discussions. Feel free to reach out if you're working on similar topics or would like to explore potential partnerships.
+          {page.cta?.paragraph ?? "I'm always open to research collaborations and academic discussions. Feel free to reach out if you're working on similar topics or would like to explore potential partnerships."}
         </p>
         <div class='flex flex-wrap gap-3 justify-center'>
-          <a href='mailto:your.email@example.com' class='btn btn-primary gap-2'>
+          <a href={`mailto:${page.cta?.contact_email ?? 'your.email@example.com'}`} class='btn btn-primary gap-2'>
             <svg class='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
             </svg>
             Contact Me
           </a>
-          <a href='https://scholar.google.com' target='_blank' rel='noopener noreferrer' class='btn btn-outline gap-2'>
+          <a href={page.cta?.scholar_url ?? 'https://scholar.google.com'} target='_blank' rel='noopener noreferrer' class='btn btn-outline gap-2'>
             <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 24 24'>
               <path d='M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm0 1.846c5.595 0 10.154 4.559 10.154 10.154s-4.559 10.154-10.154 10.154-10.154-4.559-10.154-10.154 4.559-10.154 10.154-10.154zm-4.184 3.846l-3.231 3.231 7.415 4.615 7.231-7.231-3.23-3.231-4.001 4.001-4.184-1.385zm8.599 7.385l-4.415 4.415-4.415-4.415 4.415-2.769 4.415 2.769z'></path>
             </svg>
-            Google Scholar
+            {page.cta?.scholar_text ?? 'Google Scholar'}
           </a>
         </div>
       </div>

@@ -15,6 +15,13 @@ export const experiences = [
 	// },
 ];
 
+export const page = {
+	education_title: 'Education',
+	experiences_title: 'Experiences',
+	publications_title: 'Last publications',
+	skills_title: 'Skills'
+};
+
 export const education = [
 	{
 		school: '',

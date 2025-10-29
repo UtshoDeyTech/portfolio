@@ -46,12 +46,21 @@ export interface ProjectItem {
   contributor_count?: number;       // Number of contributors
   collaboration?: string;           // Collaboration details
   tags?: string[];                  // Tags for categorization
+  cover_image?: string;             // Optional cover/thumbnail image URL (e.g. "/images/projects/project1.jpg")
   is_visible?: boolean;             // Set to false to hide this entry (default: true)
   display_order?: number;           // Order of display (lower numbers appear first)
 }
 
 export interface ProjectsData {
   projects: ProjectItem[];
+  page?: {
+    title?: string;
+    subtitle?: string;
+    stats_labels?: {
+      total_projects?: string;
+      categories?: string;
+    };
+  };
 }
 
 export const projectsData: ProjectsData = {
@@ -236,7 +245,23 @@ export const projectsData: ProjectsData = {
       "is_visible": true,
       "display_order": 6
     }
+
   ]
+  ,
+  "page": {
+    "title": "Projects",
+    "subtitle": "A showcase of my professional and personal work",
+    "stats_labels": {
+      "total_projects": "Total Projects",
+      "categories": "Categories"
+    }
+  }
+};
+
+export const getVisibleProjects = (): ProjectItem[] => {
+  return projectsData.projects
+    .filter(p => p.is_visible !== false)
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 };
 
 /**

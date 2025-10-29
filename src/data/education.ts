@@ -36,6 +36,11 @@ export interface EducationData {
     created_at: string;
     updated_at: string;
   };
+  page?: {
+    title?: string;
+    subtitle?: string;
+    empty_text?: string;
+  };
   education: EducationItem[];
 }
 
@@ -124,6 +129,23 @@ export const educationData: EducationData = {
       "display_order": 4
     }
   ]
+  ,
+  "page": {
+    "title": "Education",
+    "subtitle": "My academic journey and qualifications",
+    "empty_text": "No education records available"
+  }
+};
+
+/**
+ * Helper: getVisibleEducation
+ * Returns the list of education entries that are visible, sorted by display_order.
+ * Use this helper from pages to centralize filtering/sorting logic.
+ */
+export const getVisibleEducation = (): EducationItem[] => {
+  return educationData.education
+    .filter(item => item.is_visible !== false)
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 };
 
 /**

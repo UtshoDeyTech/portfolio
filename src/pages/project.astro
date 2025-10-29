@@ -1,12 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ProjectCard from '../components/ui/ProjectCard.astro';
-import { projectsData } from '@/data/projects';
+import { projectsData, getVisibleProjects } from '@/data/projects';
 
 // Filter visible projects and sort by display_order
-const visibleProjects = projectsData.projects
-  .filter(item => item.is_visible !== false)
-  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+const visibleProjects = getVisibleProjects();
+const page = projectsData.page || {};
 
 // Count projects by type
 const projectsByType = visibleProjects.reduce((acc, project) => {
@@ -38,8 +37,8 @@ const allTags = Array.from(
           </svg>
         </div>
         <div>
-          <h1 class='text-4xl font-bold text-base-content'>Projects</h1>
-          <p class='text-base-content/70 mt-2'>A showcase of my professional and personal work</p>
+          <h1 class='text-4xl font-bold text-base-content'>{page.title ?? 'Projects'}</h1>
+          <p class='text-base-content/70 mt-2'>{page.subtitle ?? 'A showcase of my professional and personal work'}</p>
         </div>
       </div>
 
@@ -50,7 +49,7 @@ const allTags = Array.from(
             {visibleProjects.length}
           </div>
           <div class='text-xs text-base-content/60 mt-1'>
-            Total Projects
+            {page.stats_labels?.total_projects ?? 'Total Projects'}
           </div>
         </div>
 
@@ -60,7 +59,7 @@ const allTags = Array.from(
               {Object.keys(projectsByType).length}
             </div>
             <div class='text-xs text-base-content/60 mt-1'>
-              Categories
+              {page.stats_labels?.categories ?? 'Categories'}
             </div>
           </div>
         )}
