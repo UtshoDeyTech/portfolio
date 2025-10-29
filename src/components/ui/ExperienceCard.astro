@@ -1,12 +1,6 @@
 ---
-// FIX: The compilation environment repeatedly fails when a type or interface declaration 
-// is the first thing in the frontmatter after the opening '---'. 
-// Adding a simple, safe import at the top often stabilizes the parser context, 
-// allowing the subsequent interface declaration to be correctly interpreted as TypeScript.
-
-import type { Fragment } from 'astro/components'; // Stable placeholder import
-
-// NOTE: Switched back to 'interface' and ensured a final semicolon, which sometimes helps.
+// NOTE: Interface declarations in the frontmatter
+// Define the shape of our experience item data
 interface ExperienceItem {
   company_logo_url: string;
   company_name: string;
@@ -85,18 +79,14 @@ const getEmploymentTypeStyle = (type: string) => {
 
 <div class='experience-item relative pt-6 sm:pt-0 mb-6'>
   
-  <!-- Current Indicator Dot (Floating) -->
-  <div class={`absolute top-0 right-0 z-20 transition-transform duration-300 ${item.is_current ? 'animate-bounce-subtle' : ''}`}>
-    <div class={`w-5 h-5 rounded-full shadow-md flex items-center justify-center ${
-      item.is_current 
-        ? 'bg-primary ring-4 ring-primary/20' 
-        : 'bg-base-300 ring-2 ring-base-300/10'
-    }`}>
-      {item.is_current && (
-        <span class='block w-2 h-2 rounded-full bg-primary-content'></span>
-      )}
+  <!-- Active Job Indicator -->
+  {item.is_current && (
+    <div class="absolute top-2 right-2 z-20">
+      <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-primary-content shadow-md">
+        Active
+      </span>
     </div>
-  </div>
+  )}
 
   <!-- The Executive Card Container -->
   <div class='executive-card bg-base-100 rounded-2xl shadow-xl transition-all duration-500 border-2 border-base-300 overflow-hidden backdrop-blur-sm transform hover:scale-[1.01] hover:shadow-2xl'>
@@ -229,20 +219,6 @@ const getEmploymentTypeStyle = (type: string) => {
 </div>
 
 <style>
-  /* Custom bounce for the "Current" indicator, making it subtle and continuous */
-  @keyframes bounce-subtle {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-4px);
-    }
-  }
-
-  .animate-bounce-subtle {
-    animation: bounce-subtle 3s ease-in-out infinite;
-  }
-
   .executive-card {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);

@@ -285,7 +285,9 @@ const {fullName, title} = profile
 
 			// Remove old event listeners to prevent duplicates
 			const newToggle = collapseToggle.cloneNode(true);
-			collapseToggle.parentNode.replaceChild(newToggle, collapseToggle);
+			if (collapseToggle.parentNode) {
+				collapseToggle.parentNode.replaceChild(newToggle, collapseToggle);
+			}
 
 			// Add toggle handler to new button
 			newToggle.addEventListener('click', function() {
