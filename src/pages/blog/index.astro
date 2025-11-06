@@ -162,7 +162,7 @@ const hasBlogs = allBlogs.length > 0;
               data-published-date={blog.published_date || ''}
             >
               <!-- List View -->
-              <a href={`/blog/${blog.slug}`} class='list-item hidden group'>
+              <a href={`/blog/${blog.slug}`} class='list-item group'>
                 <div class='flex items-center gap-4 bg-base-100 rounded-lg p-4 hover:bg-base-200 transition-all border border-base-300 hover:border-primary/40'>
                   {blog.cover_image && (
                     <img src={blog.cover_image} alt={blog.title} class='w-20 h-20 rounded-lg object-cover flex-shrink-0' />
@@ -339,23 +339,24 @@ const hasBlogs = allBlogs.length > 0;
 </Layout>
 
 <script>
-  // View toggle functionality
-  const viewToggles = document.querySelectorAll('.view-toggle');
-  const blogList = document.getElementById('blog-list');
-  const blogItems = document.querySelectorAll('.blog-item');
-  const categoryFilter = document.getElementById('category-filter') as HTMLSelectElement;
-  const searchInput = document.getElementById('search-input') as HTMLInputElement;
-  const blogCount = document.getElementById('blog-count');
-  const noResults = document.getElementById('no-results');
-  const blogTabs = document.querySelectorAll('.blog-tab');
-  const sectionTitle = document.getElementById('section-title');
+  function initBlogPage() {
+    // View toggle functionality
+    const viewToggles = document.querySelectorAll('.view-toggle');
+    const blogList = document.getElementById('blog-list');
+    const blogItems = document.querySelectorAll('.blog-item');
+    const categoryFilter = document.getElementById('category-filter') as HTMLSelectElement;
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const blogCount = document.getElementById('blog-count');
+    const noResults = document.getElementById('no-results');
+    const blogTabs = document.querySelectorAll('.blog-tab');
+    const sectionTitle = document.getElementById('section-title');
 
-  let currentView = 'list';
-  let currentTab = 'all';
+    let currentView = 'list';
+    let currentTab = 'all';
 
-  // Load saved view from localStorage
-  const savedView = localStorage.getItem('blogView') || 'list';
-  switchView(savedView);
+    // Load saved view from localStorage
+    const savedView = localStorage.getItem('blogView') || 'list';
+    switchView(savedView);
 
   // Tab functionality
   blogTabs.forEach(tab => {
@@ -517,6 +518,12 @@ const hasBlogs = allBlogs.length > 0;
       noResults?.classList.add('hidden');
     }
   }
+  }
+
+  // Initialize on page load and Astro navigation
+  document.addEventListener('DOMContentLoaded', initBlogPage);
+  document.addEventListener('astro:page-load', initBlogPage);
+  document.addEventListener('astro:after-swap', initBlogPage);
 </script>
 
 <style>

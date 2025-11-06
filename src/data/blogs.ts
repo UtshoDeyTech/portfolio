@@ -1,46 +1,47 @@
 /**
  * Blog Data Structure
  *
- * This file contains all blog metadata and configuration.
- * Blog content is stored as .md files in the /public/all_blogs_files/ folder.
- *
- * To add a new blog:
- * 1. Create a .md file in /public/all_blogs_files/ (e.g., my-blog-post.md)
- * 2. Add blog metadata to the blogs array below
- * 3. Set the file_name to match your .md file name
- * 4. Configure other metadata (title, description, tags, etc.)
+ * This file contains all blog metadata and functionality.
+ * Blog data is fetched from the API endpoints.
  *
  * Features:
  * - Pagination support (configure posts_per_page)
- * - New blogs and top blogs sections
+ * - Trending and featured blogs sections
  * - Category/topic organization
- * - Draft mode for unpublished posts
+ * - Full content support with markdown/html
  */
 
 import siteData from './site-data.json';
 
 export interface BlogPost {
-  id?: string;
-  file_name: string;
-  title: string;
+  id?: number;
   slug?: string;
-  description?: string;
-  author?: string;
-  author_image?: string;
-  published_date?: string;
-  updated_date?: string;
-  read_time?: number;
+  title?: string;
+  subtitle?: string;
+  excerpt?: string;
+  content_markdown?: string;
+  content_html?: string;
   cover_image?: string;
+  featured_image?: string;
+  category?: string;
   tags?: string[];
-  categories?: string[];
-  is_featured?: boolean;
-  is_top_blog?: boolean;
+  author?: string;
+  published_date?: string;
+  created_at?: string;
+  updated_at?: string;
   views?: number;
   likes?: number;
-  is_draft?: boolean;
-  is_visible?: boolean;
-  seo_keywords?: string[];
+  comments_count?: number;
+  shares?: number;
+  is_published?: boolean;
+  is_featured?: boolean;
+  is_trending?: boolean;
+  is_editor_choice?: boolean;
+  allow_comments?: boolean;
   display_order?: number;
+  read_time?: number;
+  meta_description?: string;
+  meta_keywords?: string;
 }
 
 export interface BlogMetadata {
@@ -63,16 +64,263 @@ export interface BlogsData {
   future_topics: FutureBlogTopics[];
 }
 
-export const blogsData: BlogsData = (siteData as any).blogsData;
-
-export const getPublishedBlogs = () => {
-  return blogsData.blogs.filter(
-    (blog) => blog.is_visible !== false && blog.is_draft !== true
-  );
+/**
+ * Keep metadata and future topics from local `site-data.json`.
+ * Blog posts are fetched from the API.
+ */
+export const blogsData: BlogsData = {
+  metadata: (siteData as any).blogsData?.metadata || {
+    site_title: 'Blog',
+    site_description: 'Insights and articles',
+    posts_per_page: 6,
+    author_default: 'Author',
+    author_image_default: '/images/profile.jpg',
+  },
+  blogs: [],
+  future_topics: (siteData as any).blogsData?.future_topics || [],
 };
 
-export const getNewBlogs = (limit: number = 5) => {
-  return getPublishedBlogs()
+// API Endpoints
+const BLOG_POSTS_API = 'http://localhost:8000/api/blog-posts/';
+const BLOGS_API = 'http://localhost:8000/api/blogs/';
+const TRENDING_BLOGS_API = 'http://localhost:8000/api/trending-blogs/';
+const FEATURED_BLOGS_API = 'http://localhost:8000/api/featured-blogs/';
+
+/**
+ * Fetch all blog posts from the API
+ */
+export const fetchBlogPosts = async (): Promise<BlogPost[]> => {
+  try {
+    const res = await fetch(BLOG_POSTS_API);
+    if (!res.ok) {
+      console.error(`Failed to fetch blog posts: ${res.status} ${res.statusText}`);
+      return [];
+    }
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      subtitle: item.subtitle,
+      excerpt: item.excerpt,
+      content_markdown: item.content_markdown,
+      content_html: item.content_html,
+      cover_image: item.cover_image,
+      featured_image: item.featured_image,
+      category: item.category,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      author: item.author,
+      published_date: item.published_date,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      views: item.views,
+      likes: item.likes,
+      comments_count: item.comments_count,
+      shares: item.shares,
+      is_published: item.is_published,
+      is_featured: item.is_featured,
+      is_trending: item.is_trending,
+      is_editor_choice: item.is_editor_choice,
+      allow_comments: item.allow_comments,
+      display_order: item.display_order,
+      read_time: item.read_time,
+      meta_description: item.meta_description,
+      meta_keywords: item.meta_keywords,
+    } as BlogPost));
+  } catch (err) {
+    console.error('Error fetching blog posts:', err);
+    return [];
+  }
+};
+
+/**
+ * Fetch a single blog post by slug with full content
+ */
+export const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost | null> => {
+  try {
+    const res = await fetch(`${BLOG_POSTS_API}${slug}/`);
+    if (!res.ok) {
+      console.error(`Failed to fetch blog post ${slug}: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    const item = await res.json();
+
+    return {
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      subtitle: item.subtitle,
+      excerpt: item.excerpt,
+      content_markdown: item.content_markdown,
+      content_html: item.content_html,
+      cover_image: item.cover_image,
+      featured_image: item.featured_image,
+      category: item.category,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      author: item.author,
+      published_date: item.published_date,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      views: item.views,
+      likes: item.likes,
+      comments_count: item.comments_count,
+      shares: item.shares,
+      is_published: item.is_published,
+      is_featured: item.is_featured,
+      is_trending: item.is_trending,
+      is_editor_choice: item.is_editor_choice,
+      allow_comments: item.allow_comments,
+      display_order: item.display_order,
+      read_time: item.read_time,
+      meta_description: item.meta_description,
+      meta_keywords: item.meta_keywords,
+    } as BlogPost;
+  } catch (err) {
+    console.error(`Error fetching blog post ${slug}:`, err);
+    return null;
+  }
+};
+
+/**
+ * Fetch blog metadata and future topics
+ */
+export const fetchBlogMetadata = async (): Promise<Partial<BlogsData>> => {
+  try {
+    const res = await fetch(BLOGS_API);
+    if (!res.ok) {
+      console.error(`Failed to fetch blog metadata: ${res.status} ${res.statusText}`);
+      return {};
+    }
+    const data = await res.json();
+
+    return {
+      metadata: data.metadata || blogsData.metadata,
+      future_topics: Array.isArray(data.future_topics) ? data.future_topics : [],
+    };
+  } catch (err) {
+    console.error('Error fetching blog metadata:', err);
+    return {};
+  }
+};
+
+/**
+ * Fetch trending blog posts
+ */
+export const fetchTrendingBlogs = async (): Promise<BlogPost[]> => {
+  try {
+    const res = await fetch(TRENDING_BLOGS_API);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      subtitle: item.subtitle,
+      excerpt: item.excerpt,
+      cover_image: item.cover_image,
+      category: item.category,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      author: item.author,
+      published_date: item.published_date,
+      views: item.views,
+      likes: item.likes,
+      comments_count: item.comments_count,
+      is_trending: item.is_trending,
+      is_featured: item.is_featured,
+      read_time: item.read_time,
+    } as BlogPost));
+  } catch (err) {
+    console.error('Error fetching trending blogs:', err);
+    return [];
+  }
+};
+
+/**
+ * Fetch featured blog posts
+ */
+export const fetchFeaturedBlogs = async (): Promise<BlogPost[]> => {
+  try {
+    const res = await fetch(FEATURED_BLOGS_API);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      subtitle: item.subtitle,
+      excerpt: item.excerpt,
+      cover_image: item.cover_image,
+      category: item.category,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      author: item.author,
+      published_date: item.published_date,
+      views: item.views,
+      likes: item.likes,
+      comments_count: item.comments_count,
+      is_trending: item.is_trending,
+      is_featured: item.is_featured,
+      read_time: item.read_time,
+    } as BlogPost));
+  } catch (err) {
+    console.error('Error fetching featured blogs:', err);
+    return [];
+  }
+};
+
+/**
+ * Fetch blogs by category
+ */
+export const fetchBlogsByCategory = async (category: string): Promise<BlogPost[]> => {
+  try {
+    const res = await fetch(`${BLOGS_API}category/${encodeURIComponent(category)}/`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      subtitle: item.subtitle,
+      excerpt: item.excerpt,
+      cover_image: item.cover_image,
+      category: item.category,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      author: item.author,
+      published_date: item.published_date,
+      views: item.views,
+      likes: item.likes,
+      comments_count: item.comments_count,
+      is_trending: item.is_trending,
+      is_featured: item.is_featured,
+      read_time: item.read_time,
+    } as BlogPost));
+  } catch (err) {
+    console.error(`Error fetching blogs by category ${category}:`, err);
+    return [];
+  }
+};
+
+/**
+ * Get all published blogs (async)
+ */
+export const getPublishedBlogs = async (): Promise<BlogPost[]> => {
+  const posts = await fetchBlogPosts();
+  return posts.filter((blog) => blog.is_published !== false);
+};
+
+/**
+ * Get newest blogs (async)
+ */
+export const getNewBlogs = async (limit: number = 5): Promise<BlogPost[]> => {
+  const posts = await getPublishedBlogs();
+  return posts
     .sort((a, b) => {
       const dateA = a.published_date || '0';
       const dateB = b.published_date || '0';
@@ -81,29 +329,14 @@ export const getNewBlogs = (limit: number = 5) => {
     .slice(0, limit);
 };
 
-export const getTopBlogs = (limit: number = 5) => {
-  return getPublishedBlogs()
-    .filter((blog) => blog.is_top_blog === true || blog.is_featured === true)
-    .sort((a, b) => {
-      const viewsA = a.views || 0;
-      const viewsB = b.views || 0;
-      if (viewsA !== viewsB) return viewsB - viewsA;
-      return (b.likes || 0) - (a.likes || 0);
-    })
-    .slice(0, limit);
-};
-
-export const getBlogsByCategory = (category: string) => {
-  return getPublishedBlogs().filter((blog) => blog.categories?.includes(category));
-};
-
-export const getBlogsByTag = (tag: string) => {
-  return getPublishedBlogs().filter((blog) => blog.tags?.includes(tag));
-};
-
-export const getPaginatedBlogs = (page: number = 1, perPage?: number) => {
+/**
+ * Get paginated blogs (async)
+ */
+export const getPaginatedBlogs = async (page: number = 1, perPage?: number) => {
   const postsPerPage = perPage || blogsData.metadata.posts_per_page;
-  const allBlogs = getPublishedBlogs().sort((a, b) => {
+  const allBlogs = await getPublishedBlogs();
+
+  const sortedBlogs = allBlogs.sort((a, b) => {
     if (a.display_order !== b.display_order) {
       return (a.display_order || 999) - (b.display_order || 999);
     }
@@ -112,35 +345,43 @@ export const getPaginatedBlogs = (page: number = 1, perPage?: number) => {
     return dateB.localeCompare(dateA);
   });
 
-  const totalPages = Math.ceil(allBlogs.length / postsPerPage);
+  const totalPages = Math.ceil(sortedBlogs.length / postsPerPage);
   const startIndex = (page - 1) * postsPerPage;
   const endIndex = startIndex + postsPerPage;
-  const blogs = allBlogs.slice(startIndex, endIndex);
+  const blogs = sortedBlogs.slice(startIndex, endIndex);
 
   return {
     blogs,
     currentPage: page,
     totalPages,
-    totalPosts: allBlogs.length,
+    totalPosts: sortedBlogs.length,
     hasNextPage: page < totalPages,
     hasPrevPage: page > 1,
   };
 };
 
-export const getAllCategories = () => {
+/**
+ * Get all categories (async)
+ */
+export const getAllCategories = async (): Promise<string[]> => {
+  const posts = await getPublishedBlogs();
   return Array.from(
     new Set(
-      getPublishedBlogs()
-        .flatMap((blog) => blog.categories || [])
+      posts
+        .map((blog) => blog.category)
         .filter((cat) => cat && cat.trim() !== '')
     )
   ).sort();
 };
 
-export const getAllTags = () => {
+/**
+ * Get all tags (async)
+ */
+export const getAllTags = async (): Promise<string[]> => {
+  const posts = await getPublishedBlogs();
   return Array.from(
     new Set(
-      getPublishedBlogs()
+      posts
         .flatMap((blog) => blog.tags || [])
         .filter((tag) => tag && tag.trim() !== '')
     )
