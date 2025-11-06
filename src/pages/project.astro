@@ -3,8 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import ProjectCard from '../components/ui/ProjectCard.astro';
 import { projectsData, getVisibleProjects } from '@/data/projects';
 
-// Filter visible projects and sort by display_order
-const visibleProjects = getVisibleProjects();
+// Load visible projects from API
+const visibleProjects = await getVisibleProjects();
 const page = projectsData.page || {};
 
 // Count projects by type

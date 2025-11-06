@@ -1,20 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ResearchCard from '../components/ui/ResearchCard.astro';
-import { researchData } from '@/data/research';
+import { researchData, getVisiblePublications } from '@/data/research';
 
-// Filter visible research publications and sort by display_order
-const visibleResearch = researchData.research_publications
-  .filter(item => item.is_visible !== false)
-  .sort((a, b) => {
-    // Sort by display_order first, then by publication_date (most recent first)
-    if (a.display_order !== b.display_order) {
-      return (a.display_order || 0) - (b.display_order || 0);
-    }
-    const dateA = a.publication_date || '0';
-    const dateB = b.publication_date || '0';
-    return dateB.localeCompare(dateA);
-  });
+// Fetch visible research publications from API
+const visibleResearch = await getVisiblePublications();
 
 // Count publications by type
 const publicationsByType = visibleResearch.reduce((acc, pub) => {

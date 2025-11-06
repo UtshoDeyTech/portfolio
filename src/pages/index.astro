@@ -2,23 +2,26 @@
 import Layout from '../layouts/Layout.astro';
 import { homeData } from '@/data/home';
 import ProfilePictures from '@/assets/profile_pictures.jpg';
-import { educationData } from '@/data/education';
+import { getVisibleEducation, educationData } from '@/data/education';
 import { experienceData } from '@/data/experience';
 import { projectsData } from '@/data/projects';
 import { researchData } from '@/data/research';
 import { getNewBlogs } from '@/data/blogs';
+import { getVisibleExperience } from '@/data/experience';
+import { getVisibleProjects } from '@/data/projects';
 
 // Get latest/current data from each section
-const latestEducation = educationData.education
-  .filter(edu => edu.is_visible !== false)
-  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
+// Load education entries from API
+const educationList = await getVisibleEducation();
+const latestEducation = educationList[0];
 
-const currentExperience = experienceData.experiences
-  .filter(exp => exp.is_visible !== false && exp.is_current === true)
-  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))[0];
+// Load experience entries from API and pick the current one
+const experienceList = await getVisibleExperience();
+const currentExperience = experienceList.find(exp => exp.is_current === true) || experienceList[0];
 
-const featuredProjects = projectsData.projects
-  .filter(proj => proj.is_visible !== false && proj.is_featured === true)
+// Load featured projects from API
+const featuredProjects = (await getVisibleProjects())
+  .filter(proj => proj.is_visible !== false && (proj as any).is_featured === true)
   .slice(0, 3);
 
 const latestResearch = researchData.research_publications

@@ -1,12 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ExperienceCard from '../components/ui/ExperienceCard.astro';
-import { experienceData } from '@/data/experience';
+import { getVisibleExperience, experienceData } from '@/data/experience';
 
-// Filter visible experience items and sort by display_order
-const visibleExperiences = experienceData.experiences
-  .filter(item => item.is_visible !== false)
-  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+// Load visible experiences from API
+const visibleExperiences = await getVisibleExperience();
 
 // Calculate total years of experience
 const calculateTotalExperience = () => {

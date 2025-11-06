@@ -51,10 +51,59 @@ export interface ProjectsData {
   };
 }
 
-export const projectsData: ProjectsData = (siteData as any).projectsData;
+export const projectsData: ProjectsData = {
+  projects: (siteData as any).projectsData?.projects || [],
+  page: (siteData as any).projectsData?.page || {},
+};
 
-export const getVisibleProjects = (): ProjectItem[] => {
-  return projectsData.projects
+const PROJECTS_API = 'http://localhost:8000/api/projects/';
+
+export const fetchProjects = async (): Promise<ProjectItem[]> => {
+  try {
+    const res = await fetch(PROJECTS_API);
+    if (!res.ok) {
+      console.error(`Failed to fetch projects: ${res.status} ${res.statusText}`);
+      return [];
+    }
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      id: item.id?.toString?.(),
+      title: item.title || item.slug || item.id?.toString?.(),
+      organization: item.organization,
+      role: item.role,
+      start_date: item.start_date,
+      end_date: item.end_date,
+      type: item.type,
+      short_description: item.short_description,
+      description: item.description,
+      responsibilities: Array.isArray(item.responsibilities) ? item.responsibilities : [],
+      achievements: Array.isArray(item.achievements) ? item.achievements : [],
+      features: Array.isArray(item.features) ? item.features : [],
+      skills: Array.isArray(item.skills) ? item.skills : [],
+      tech_stack: item.tech_stack || undefined,
+      datasets: Array.isArray(item.datasets) ? item.datasets : [],
+      accuracy: item.accuracy,
+      project_url: item.project_url,
+      github_url: item.github_url,
+      demo_url: item.demo_url,
+      contributor_count: item.contributor_count,
+      collaboration: item.collaboration,
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      cover_image: item.cover_image,
+      is_visible: item.is_visible,
+      display_order: item.display_order,
+    } as ProjectItem));
+  } catch (err) {
+    console.error('Error fetching projects data:', err);
+    return [];
+  }
+};
+
+export const getVisibleProjects = async (): Promise<ProjectItem[]> => {
+  const list = await fetchProjects();
+  return list
     .filter((p) => p.is_visible !== false)
     .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 };

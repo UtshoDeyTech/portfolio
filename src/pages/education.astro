@@ -4,8 +4,8 @@ import EducationCard from '../components/ui/EducationCard.astro';
 import { getVisibleEducation, educationData } from '@/data/education';
 import EducationList from '../components/ui/EducationList.astro';
 
-// Centralized: get visible education from data helper
-const visibleEducation = getVisibleEducation();
+// Centralized: get visible education from data helper (async)
+const visibleEducation = await getVisibleEducation();
 const page = educationData.page || {};
 ---
 

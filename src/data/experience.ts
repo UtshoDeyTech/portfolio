@@ -50,7 +50,62 @@ export interface ExperienceData {
 }
 import siteData from './site-data.json';
 
-export const experienceData: ExperienceData = (siteData as any).experienceData;
+/**
+ * Keep metadata and page content from local `site-data.json` (used for titles/metadata).
+ * The actual list of experiences is fetched from the external API via
+ * `fetchExperience` / `getVisibleExperience` below.
+ */
+export const experienceData: ExperienceData = {
+  metadata: (siteData as any).experienceData?.metadata || { created_at: '', updated_at: '' },
+  page: (siteData as any).experienceData?.page || {},
+  experiences: [],
+};
+
+// Use the API endpoint for experience. If your server uses a different path
+// (e.g. a typo like /api/exprience), update this constant accordingly.
+const EXPERIENCE_API = 'http://localhost:8000/api/experience/';
+
+export const fetchExperience = async (): Promise<ExperienceItem[]> => {
+  try {
+    const res = await fetch(EXPERIENCE_API);
+    if (!res.ok) {
+      console.error(`Failed to fetch experience: ${res.status} ${res.statusText}`);
+      return [];
+    }
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => ({
+      company_name: item.company_name,
+      company_logo_url: item.company_logo_url,
+      role: item.role,
+      employment_type: item.employment_type,
+      location: item.location,
+      work_mode: item.work_mode,
+      start_date: item.start_date,
+      end_date: item.end_date,
+      is_current: item.is_current,
+      description: item.description,
+      achievements: Array.isArray(item.achievements) ? item.achievements : [],
+      skills: Array.isArray(item.skills) ? item.skills : [],
+      tech_stack: Array.isArray(item.tech_stack) ? item.tech_stack : [],
+      is_visible: item.is_visible,
+      display_order: item.display_order,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    } as ExperienceItem));
+  } catch (err) {
+    console.error('Error fetching experience data:', err);
+    return [];
+  }
+};
+
+export const getVisibleExperience = async (): Promise<ExperienceItem[]> => {
+  const list = await fetchExperience();
+  return list
+    .filter((item) => item.is_visible !== false)
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+};
 
 /**
  * Example: Adding a new experience entry with minimal fields
