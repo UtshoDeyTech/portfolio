@@ -1,0 +1,606 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getPaginatedBlogs, fetchTrendingBlogs, fetchFeaturedBlogs, blogsData, fetchBlogMetadata } from '@/data/blogs';
+
+// Fetch all blogs
+const paginatedData = await getPaginatedBlogs(1, 100);
+const allBlogs = paginatedData.blogs;
+const trendingBlogs = await fetchTrendingBlogs();
+const featuredBlogs = await fetchFeaturedBlogs();
+const metadata = await fetchBlogMetadata();
+
+// Use metadata from API if available
+const pageMetadata = metadata.metadata || blogsData.metadata;
+const futureTopics = metadata.future_topics || blogsData.future_topics;
+
+// Get all categories
+const allCategories = Array.from(
+  new Set(allBlogs.map(blog => blog.category).filter(Boolean))
+).sort();
+
+// Check if we have any blogs
+const hasBlogs = allBlogs.length > 0;
+---
+
+<Layout title={pageMetadata.site_title}>
+  <!-- Page Header -->
+  <section class='mb-8'>
+    <div class='flex items-center gap-4 mb-4'>
+      <div class='p-3 bg-primary/10 rounded-lg'>
+        <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class='text-4xl font-bold text-base-content'>{pageMetadata.site_title}</h1>
+        <p class='text-base-content/70 mt-2'>{pageMetadata.site_description}</p>
+      </div>
+    </div>
+  </section>
+
+  {hasBlogs ? (
+    <>
+      <!-- Tab System -->
+      <section class='mb-8'>
+        <div class='flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4'>
+          <!-- Tabs -->
+          <div class='tabs tabs-boxed bg-base-200 p-1'>
+            <button class='tab tab-active blog-tab' data-tab='all'>
+              <svg class='w-4 h-4 mr-2' fill='currentColor' viewBox='0 0 20 20'>
+                <path d='M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z'></path>
+              </svg>
+              All Blogs
+            </button>
+            <button class='tab blog-tab' data-tab='new'>
+              <svg class='w-4 h-4 mr-2' fill='currentColor' viewBox='0 0 20 20'>
+                <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z' clip-rule='evenodd'></path>
+              </svg>
+              New
+            </button>
+            <button class='tab blog-tab' data-tab='trending'>
+              <svg class='w-4 h-4 mr-2' fill='currentColor' viewBox='0 0 20 20'>
+                <path fill-rule='evenodd' d='M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z' clip-rule='evenodd'></path>
+              </svg>
+              Trending
+            </button>
+            <button class='tab blog-tab' data-tab='featured'>
+              <svg class='w-4 h-4 mr-2' fill='currentColor' viewBox='0 0 20 20'>
+                <path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z'></path>
+              </svg>
+              Featured
+            </button>
+          </div>
+
+          <!-- Stats -->
+          <div class='text-sm text-base-content/60 font-medium'>
+            <span id='blog-count'>{allBlogs.length}</span> posts
+          </div>
+        </div>
+      </section>
+
+      <!-- View Controls & Filters -->
+      <section class='mb-8'>
+        <div class='bg-base-200 rounded-lg p-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4'>
+          <!-- View Toggle Buttons -->
+          <div class='flex items-center gap-2'>
+            <span class='text-sm font-medium text-base-content/70 mr-2'>View:</span>
+            <div class='join'>
+              <button
+                id='view-list'
+                class='join-item btn btn-sm view-toggle btn-active'
+                data-view='list'
+                title='List View'
+              >
+                <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
+                  <path fill-rule='evenodd' d='M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z' clip-rule='evenodd'></path>
+                </svg>
+              </button>
+              <button
+                id='view-grid'
+                class='join-item btn btn-sm view-toggle'
+                data-view='grid'
+                title='Grid View'
+              >
+                <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
+                  <path d='M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'></path>
+                </svg>
+              </button>
+              <button
+                id='view-large'
+                class='join-item btn btn-sm view-toggle'
+                data-view='large'
+                title='Large View'
+              >
+                <svg class='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
+                  <path d='M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 12a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zM11 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V4zM11 12a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z'></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Category Filter -->
+          {allCategories.length > 0 && (
+            <div class='flex items-center gap-2 flex-wrap'>
+              <span class='text-sm font-medium text-base-content/70'>Category:</span>
+              <select id='category-filter' class='select select-sm select-bordered'>
+                <option value='all'>All Categories</option>
+                {allCategories.map(category => (
+                  <option value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <!-- Search -->
+          <div class='flex items-center gap-2 flex-1 lg:max-w-xs'>
+            <input
+              id='search-input'
+              type='text'
+              placeholder='Search blogs...'
+              class='input input-sm input-bordered w-full'
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- All Blogs Container -->
+      <section>
+        <div class='flex items-center justify-between mb-6'>
+          <h2 id='section-title' class='text-2xl font-bold text-base-content'>All Posts</h2>
+        </div>
+
+        <!-- Blog List Container - Dynamic view based on toggle -->
+        <div id='blog-list' class='list-view' data-blogs={JSON.stringify(allBlogs)}>
+          {allBlogs.map(blog => (
+            <article
+              class='blog-item'
+              data-category={blog.category || ''}
+              data-title={blog.title?.toLowerCase() || ''}
+              data-tags={blog.tags?.join(' ').toLowerCase() || ''}
+              data-is-featured={blog.is_featured ? 'true' : 'false'}
+              data-is-trending={blog.is_trending ? 'true' : 'false'}
+              data-published-date={blog.published_date || ''}
+            >
+              <!-- List View -->
+              <a href={`/blog/${blog.slug}`} class='list-item group'>
+                <div class='flex items-center gap-4 bg-base-100 rounded-lg p-4 hover:bg-base-200 transition-all border border-base-300 hover:border-primary/40'>
+                  {blog.cover_image && (
+                    <img src={blog.cover_image} alt={blog.title} class='w-20 h-20 rounded-lg object-cover flex-shrink-0' />
+                  )}
+                  <div class='flex-1 min-w-0'>
+                    <div class='flex items-center gap-2 mb-1'>
+                      {blog.category && (
+                        <span class='badge badge-sm badge-primary'>{blog.category}</span>
+                      )}
+                      {blog.is_trending && (
+                        <span class='badge badge-sm badge-secondary'>Trending</span>
+                      )}
+                    </div>
+                    <h3 class='font-bold text-base-content group-hover:text-primary transition-colors truncate'>{blog.title}</h3>
+                    <p class='text-sm text-base-content/60 truncate'>{blog.excerpt || blog.subtitle}</p>
+                  </div>
+                  <div class='flex items-center gap-4 text-sm text-base-content/60 flex-shrink-0'>
+                    {blog.published_date && (
+                      <span>{new Date(blog.published_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    )}
+                    {blog.read_time && <span>{blog.read_time} min</span>}
+                    {blog.views && (
+                      <span class='flex items-center gap-1'>
+                        <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                          <path d='M10 12a2 2 0 100-4 2 2 0 000 4z'></path>
+                          <path fill-rule='evenodd' d='M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z' clip-rule='evenodd'></path>
+                        </svg>
+                        {blog.views}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </a>
+
+              <!-- Grid View -->
+              <a href={`/blog/${blog.slug}`} class='grid-item hidden group'>
+                <div class='bg-base-100 rounded-xl shadow-lg hover:shadow-xl transition-all border-2 border-base-300 hover:border-primary/40 overflow-hidden h-full flex flex-col'>
+                  {blog.cover_image ? (
+                    <div class='h-40 overflow-hidden'>
+                      <img src={blog.cover_image} alt={blog.title} class='w-full h-full object-cover group-hover:scale-105 transition-transform' />
+                    </div>
+                  ) : (
+                    <div class='h-40 bg-base-200 flex items-center justify-center'>
+                      <svg class='w-12 h-12 text-base-content/20' fill='currentColor' viewBox='0 0 20 20'>
+                        <path fill-rule='evenodd' d='M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z' clip-rule='evenodd'></path>
+                      </svg>
+                    </div>
+                  )}
+                  <div class='p-4 flex-1 flex flex-col'>
+                    <div class='flex items-center gap-2 mb-2'>
+                      {blog.category && (
+                        <span class='badge badge-sm badge-primary'>{blog.category}</span>
+                      )}
+                    </div>
+                    <h3 class='font-bold text-base-content group-hover:text-primary transition-colors line-clamp-2 mb-2 flex-1'>{blog.title}</h3>
+                    <div class='flex items-center justify-between text-xs text-base-content/60 mt-auto pt-2 border-t border-base-200'>
+                      {blog.read_time && <span>{blog.read_time} min</span>}
+                      {blog.views && (
+                        <span class='flex items-center gap-1'>
+                          <svg class='w-3 h-3' fill='currentColor' viewBox='0 0 20 20'>
+                            <path d='M10 12a2 2 0 100-4 2 2 0 000 4z'></path>
+                            <path fill-rule='evenodd' d='M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z' clip-rule='evenodd'></path>
+                          </svg>
+                          {blog.views}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </a>
+
+              <!-- Large View -->
+              <a href={`/blog/${blog.slug}`} class='large-item hidden group'>
+                <div class='bg-base-100 rounded-xl shadow-xl hover:shadow-2xl transition-all border-2 border-base-300 hover:border-primary/40 overflow-hidden'>
+                  <div class='lg:flex'>
+                    {blog.cover_image ? (
+                      <div class='lg:w-2/5 h-64 lg:h-auto overflow-hidden'>
+                        <img src={blog.cover_image} alt={blog.title} class='w-full h-full object-cover group-hover:scale-105 transition-transform' />
+                      </div>
+                    ) : (
+                      <div class='lg:w-2/5 h-64 lg:h-auto bg-base-200 flex items-center justify-center'>
+                        <svg class='w-16 h-16 text-base-content/20' fill='currentColor' viewBox='0 0 20 20'>
+                          <path fill-rule='evenodd' d='M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z' clip-rule='evenodd'></path>
+                        </svg>
+                      </div>
+                    )}
+                    <div class='lg:w-3/5 p-6'>
+                      <div class='flex items-center gap-2 mb-3'>
+                        {blog.category && (
+                          <span class='badge badge-primary'>{blog.category}</span>
+                        )}
+                        {blog.is_trending && (
+                          <span class='badge badge-secondary'>Trending</span>
+                        )}
+                        {blog.is_featured && (
+                          <span class='badge badge-accent'>Featured</span>
+                        )}
+                      </div>
+                      <h3 class='text-2xl font-bold text-base-content group-hover:text-primary transition-colors mb-2'>{blog.title}</h3>
+                      {blog.subtitle && (
+                        <p class='text-base-content/70 font-medium mb-3'>{blog.subtitle}</p>
+                      )}
+                      <p class='text-base-content/60 text-sm line-clamp-3 mb-4'>{blog.excerpt}</p>
+                      <div class='flex items-center gap-4 text-sm text-base-content/60'>
+                        {blog.author && <span class='font-medium'>{blog.author}</span>}
+                        {blog.published_date && <span>{new Date(blog.published_date).toLocaleDateString()}</span>}
+                        {blog.read_time && <span>{blog.read_time} min read</span>}
+                        {blog.views && (
+                          <span class='flex items-center gap-1'>
+                            <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                              <path d='M10 12a2 2 0 100-4 2 2 0 000 4z'></path>
+                              <path fill-rule='evenodd' d='M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z' clip-rule='evenodd'></path>
+                            </svg>
+                            {blog.views}
+                          </span>
+                        )}
+                      </div>
+                      {blog.tags && blog.tags.length > 0 && (
+                        <div class='flex flex-wrap gap-2 mt-4'>
+                          {blog.tags.slice(0, 5).map(tag => (
+                            <span class='badge badge-sm badge-outline'>#{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </article>
+          ))}
+        </div>
+
+        <!-- No Results Message -->
+        <div id='no-results' class='hidden text-center py-12 bg-base-200 rounded-lg'>
+          <svg class='w-16 h-16 mx-auto text-base-content/30 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path>
+          </svg>
+          <p class='text-base-content/60'>No blogs found matching your criteria</p>
+        </div>
+      </section>
+    </>
+  ) : (
+    <!-- Empty State -->
+    <section>
+      <div class='bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 rounded-2xl p-12 border border-primary/20'>
+        <div class='text-center mb-8'>
+          <div class='inline-block p-4 bg-primary/10 rounded-full mb-4'>
+            <svg class='w-12 h-12 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'></path>
+            </svg>
+          </div>
+          <h2 class='text-3xl font-bold text-base-content mb-3'>Blog Coming Soon!</h2>
+          <p class='text-lg text-base-content/70 max-w-2xl mx-auto'>
+            I'm working on creating valuable content. Here's what you can expect:
+          </p>
+        </div>
+
+        <div class='grid grid-cols-1 md:grid-cols-2 gap-6'>
+          {futureTopics.map(topic => (
+            <div class='bg-base-100 rounded-xl p-6 shadow-lg border border-base-300'>
+              <div class='flex items-start gap-4'>
+                {topic.icon && <div class='text-4xl'>{topic.icon}</div>}
+                <div>
+                  <h3 class='text-xl font-bold text-base-content mb-2'>{topic.topic}</h3>
+                  <p class='text-sm text-base-content/70'>{topic.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Layout>
+
+<script>
+  function initBlogPage() {
+    // View toggle functionality
+    const viewToggles = document.querySelectorAll('.view-toggle');
+    const blogList = document.getElementById('blog-list');
+    const blogItems = document.querySelectorAll('.blog-item');
+    const categoryFilter = document.getElementById('category-filter') as HTMLSelectElement;
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const blogCount = document.getElementById('blog-count');
+    const noResults = document.getElementById('no-results');
+    const blogTabs = document.querySelectorAll('.blog-tab');
+    const sectionTitle = document.getElementById('section-title');
+
+    let currentView = 'list';
+    let currentTab = 'all';
+
+    // Load saved view from localStorage
+    const savedView = localStorage.getItem('blogView') || 'list';
+    switchView(savedView);
+
+  // Tab functionality
+  blogTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabType = tab.getAttribute('data-tab');
+      if (tabType) {
+        // Update active tab
+        blogTabs.forEach(t => t.classList.remove('tab-active'));
+        tab.classList.add('tab-active');
+
+        currentTab = tabType;
+
+        // Update section title
+        const titles: Record<string, string> = {
+          'all': 'All Posts',
+          'new': 'New Posts',
+          'trending': 'Trending Posts',
+          'featured': 'Featured Posts'
+        };
+        if (sectionTitle) {
+          sectionTitle.textContent = titles[tabType] || 'All Posts';
+        }
+
+        // Reset filters
+        if (categoryFilter) categoryFilter.value = 'all';
+        if (searchInput) searchInput.value = '';
+
+        filterBlogs();
+      }
+    });
+  });
+
+  // View toggle event listeners
+  viewToggles.forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const view = toggle.getAttribute('data-view');
+      if (view) {
+        switchView(view);
+        localStorage.setItem('blogView', view);
+      }
+    });
+  });
+
+  function switchView(view: string) {
+    currentView = view;
+
+    // Update active button
+    viewToggles.forEach(btn => {
+      btn.classList.remove('btn-active');
+      if (btn.getAttribute('data-view') === view) {
+        btn.classList.add('btn-active');
+      }
+    });
+
+    // Update container class
+    blogList?.classList.remove('list-view', 'grid-view', 'large-view');
+    blogList?.classList.add(`${view}-view`);
+
+    // Show/hide appropriate items
+    blogItems.forEach(item => {
+      const listItem = item.querySelector('.list-item');
+      const gridItem = item.querySelector('.grid-item');
+      const largeItem = item.querySelector('.large-item');
+
+      listItem?.classList.add('hidden');
+      gridItem?.classList.add('hidden');
+      largeItem?.classList.add('hidden');
+
+      // Only show if item is not hidden by filters
+      if (!item.classList.contains('hidden')) {
+        if (view === 'list') {
+          listItem?.classList.remove('hidden');
+        } else if (view === 'grid') {
+          gridItem?.classList.remove('hidden');
+        } else if (view === 'large') {
+          largeItem?.classList.remove('hidden');
+        }
+      }
+    });
+  }
+
+  // Category filter
+  categoryFilter?.addEventListener('change', () => {
+    filterBlogs();
+  });
+
+  // Search functionality
+  searchInput?.addEventListener('input', () => {
+    filterBlogs();
+  });
+
+  function filterBlogs() {
+    const category = categoryFilter?.value || 'all';
+    const searchTerm = searchInput?.value.toLowerCase() || '';
+    let visibleCount = 0;
+
+    blogItems.forEach(item => {
+      const itemCategory = item.getAttribute('data-category') || '';
+      const itemTitle = item.getAttribute('data-title') || '';
+      const itemTags = item.getAttribute('data-tags') || '';
+      const isFeatured = item.getAttribute('data-is-featured') === 'true';
+      const isTrending = item.getAttribute('data-is-trending') === 'true';
+      const publishedDate = item.getAttribute('data-published-date') || '';
+
+      // Tab filtering
+      let matchesTab = true;
+      if (currentTab === 'featured') {
+        matchesTab = isFeatured;
+      } else if (currentTab === 'trending') {
+        matchesTab = isTrending;
+      } else if (currentTab === 'new') {
+        // Show blogs from last 30 days
+        const blogDate = new Date(publishedDate);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        matchesTab = blogDate >= thirtyDaysAgo;
+      }
+
+      // Category and search filtering
+      const matchesCategory = category === 'all' || itemCategory === category;
+      const matchesSearch = searchTerm === '' ||
+                           itemTitle.includes(searchTerm) ||
+                           itemTags.includes(searchTerm);
+
+      if (matchesTab && matchesCategory && matchesSearch) {
+        item.classList.remove('hidden');
+        visibleCount++;
+
+        // Show the appropriate view for this item
+        const listItem = item.querySelector('.list-item');
+        const gridItem = item.querySelector('.grid-item');
+        const largeItem = item.querySelector('.large-item');
+
+        listItem?.classList.add('hidden');
+        gridItem?.classList.add('hidden');
+        largeItem?.classList.add('hidden');
+
+        if (currentView === 'list') {
+          listItem?.classList.remove('hidden');
+        } else if (currentView === 'grid') {
+          gridItem?.classList.remove('hidden');
+        } else if (currentView === 'large') {
+          largeItem?.classList.remove('hidden');
+        }
+      } else {
+        item.classList.add('hidden');
+      }
+    });
+
+    // Update count
+    if (blogCount) {
+      blogCount.textContent = visibleCount.toString();
+    }
+
+    // Show/hide no results message
+    if (visibleCount === 0) {
+      noResults?.classList.remove('hidden');
+    } else {
+      noResults?.classList.add('hidden');
+    }
+  }
+  }
+
+  // Initialize on page load and Astro navigation
+  document.addEventListener('DOMContentLoaded', initBlogPage);
+  document.addEventListener('astro:page-load', initBlogPage);
+  document.addEventListener('astro:after-swap', initBlogPage);
+</script>
+
+<style>
+  /* List View Styles */
+  .list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Grid View Styles */
+  .grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Large View Styles */
+  .large-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Smooth transitions */
+  .blog-item {
+    transition: all 0.3s ease;
+  }
+
+  /* Button active state */
+  .view-toggle.btn-active {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+  }
+
+  /* Tab styles */
+  .blog-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .blog-tab.tab-active {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+    font-weight: 600;
+  }
+
+  .blog-tab:hover:not(.tab-active) {
+    background-color: hsl(var(--b3));
+  }
+
+  /* Responsive tabs */
+  @media (max-width: 640px) {
+    .tabs-boxed .tab {
+      flex-direction: column;
+      padding: 0.5rem;
+      gap: 0.25rem;
+    }
+
+    .blog-tab svg {
+      margin: 0;
+    }
+  }
+</style>

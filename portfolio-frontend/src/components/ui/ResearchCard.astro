@@ -1,0 +1,397 @@
+---
+import type { ResearchPublication } from '@/data/research';
+
+interface Props {
+  item: ResearchPublication;
+}
+
+const { item } = Astro.props;
+
+/**
+ * Utility function to check if a value is truthy, non-empty string, or non-empty array/number.
+ */
+const hasData = (value: any): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'number') return value > 0;
+  if (typeof value === 'string') return value.trim() !== '';
+  return !!value;
+};
+
+// Simplified Data Checks
+const data = {
+  hasTitle: hasData(item.title),
+  hasAuthors: hasData(item.authors),
+  hasPublicationDate: hasData(item.publication_date),
+  hasInstitution: hasData(item.institution),
+  hasBook: hasData(item.book),
+  hasPublisher: hasData(item.publisher),
+  hasPages: hasData(item.pages),
+  hasPublicationType: hasData(item.publication_type),
+  hasDescription: hasData(item.description),
+  hasAbstract: hasData(item.abstract),
+  hasObjectives: hasData(item.objectives),
+  hasMethods: hasData(item.methods_used),
+  hasModels: hasData(item.models_tested),
+  hasDataset: hasData(item.dataset),
+  hasDatasetSource: hasData(item.dataset_source),
+  hasComparisonModels: hasData(item.comparison_models),
+  hasResultsSummary: hasData(item.results_summary),
+  hasHighlights: hasData(item.highlights),
+  hasTags: hasData(item.tags),
+  hasUrl: hasData(item.url),
+  hasPdfUrl: hasData(item.pdf_url),
+  hasGithubUrl: hasData(item.github_url),
+  hasDoi: hasData(item.doi),
+  hasCoverImage: hasData((item as any).cover_image),
+  hasCitations: hasData(item.citations),
+};
+
+// Combine metrics and check for existence
+const allMetrics = [
+  ...(item.metrics || []),
+  ...(item.evaluation_metrics || []),
+].filter(hasData); // Filter out any empty strings that might have snuck in
+const hasAnyMetrics = allMetrics.length > 0;
+
+// Format authors
+const formatAuthors = (): string => {
+  if (!data.hasAuthors) return '';
+  const authors = item.authors!;
+  if (authors.length === 1) return authors[0];
+  if (authors.length === 2) return `${authors[0]} and ${authors[1]}`;
+  const lastAuthor = authors[authors.length - 1];
+  const otherAuthors = authors.slice(0, -1).join(', ');
+  // Use 'and' instead of 'and' for a slightly more academic feel
+  return `${otherAuthors}, and ${lastAuthor}`;
+};
+
+// Get publication type color - using more subtle, professional color mappings
+const getTypeColor = (): string => {
+  if (!data.hasPublicationType) return 'badge-neutral';
+  const type = item.publication_type!.toLowerCase();
+  if (type.includes('journal')) return 'badge-info/20 text-info border-info/40'; // Soft Blue for Journals
+  if (type.includes('conference')) return 'badge-warning/20 text-warning border-warning/40'; // Soft Yellow for Conferences
+  if (type.includes('thesis')) return 'badge-accent/20 text-accent border-accent/40'; // Soft Purple for Theses
+  return 'badge-neutral/20 text-base-content/80 border-base-300'; // Neutral
+};
+---
+
+<article class='research-card bg-base-100 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-t-4 border-primary/70 border-2 border-base-300 overflow-hidden mb-6'>
+  <div class='p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4'>
+    {data.hasCoverImage && (
+      <div class='w-full h-44 overflow-hidden rounded-lg mb-3'>
+        <img src={(item as any).cover_image} alt={item.title ?? 'Research image'} class='w-full h-full object-cover' />
+      </div>
+    )}
+    {/* Title */}
+    {data.hasTitle && (
+      <h3 class='text-lg sm:text-2xl md:text-3xl font-extrabold text-base-content leading-snug'>
+        {item.title}
+      </h3>
+    )}
+
+    {/* Authors & Publication Date - Combined for clean metadata line */}
+    <div class='text-sm text-base-content/70 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4'>
+      {data.hasAuthors && (
+        <p class='font-medium italic'>
+          {formatAuthors()}
+        </p>
+      )}
+      {(data.hasAuthors && data.hasPublicationDate) && <span class="hidden sm:inline">|</span>}
+      {data.hasPublicationDate && (
+        <span class='flex items-center gap-1.5'>
+          <svg class='w-4 h-4 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'></path>
+          </svg>
+          {item.publication_date}
+        </span>
+      )}
+    </div>
+
+    {/* Publication Venue, Type, Institution, Citations - Grouped for quick reference */}
+    <div class='flex flex-wrap gap-2.5 items-center pt-2 border-t border-base-300'>
+      {/* Type Badge */}
+      {data.hasPublicationType && (
+        <span class={`badge text-xs font-semibold border ${getTypeColor()}`}>
+          {item.publication_type}
+        </span>
+      )}
+
+      {/* Institution */}
+      {data.hasInstitution && (
+        <span class='flex items-center gap-1.5 text-sm text-base-content/80'>
+          <svg class='w-4 h-4 text-secondary' fill='currentColor' viewBox='0 0 20 20'>
+            <path d='M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z'></path>
+          </svg>
+          {item.institution}
+        </span>
+      )}
+
+      {/* Citations */}
+      {data.hasCitations && (
+        <span class='flex items-center gap-1.5 text-sm font-medium text-success bg-success/10 px-2.5 py-1 rounded-full'>
+          <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+            <path d='M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z'></path>
+          </svg>
+          {item.citations} citations
+        </span>
+      )}
+
+      {/* Book/Publisher Info as a subtle block */}
+      {(data.hasBook || data.hasPublisher || data.hasPages) && (
+        <div class='text-xs text-base-content/60 space-y-1 mt-2 p-2 border border-base-200 rounded-lg'>
+          {data.hasBook && (
+            <p><span class='font-semibold text-base-content/80'>In:</span> {item.book}</p>
+          )}
+          {data.hasPublisher && (
+            <p><span class='font-semibold text-base-content/80'>Pub:</span> {item.publisher}</p>
+          )}
+          {data.hasPages && (
+            <p><span class='font-semibold text-base-content/80'>Pages:</span> {item.pages}</p>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+  
+  <div class="divider m-0 h-px bg-base-300"></div>
+
+  <div class='p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6'>
+    {/* Abstract/Description - Prominent and readable */}
+    {(data.hasDescription || data.hasAbstract) && (
+      <div class='space-y-3'>
+        <h4 class='text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2'>
+          <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg>
+          Abstract
+        </h4>
+        <p class='text-base text-base-content/90 leading-relaxed'>
+          {data.hasAbstract ? item.abstract : item.description}
+        </p>
+      </div>
+    )}
+
+    {/* Key Highlights - Above the fold of technical details */}
+    {data.hasHighlights && (
+      <div class='space-y-3'>
+        <h4 class='text-sm font-bold text-success uppercase tracking-widest flex items-center gap-2'>
+          <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'><path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z'></path></svg>
+          Key Highlights
+        </h4>
+        <ul class='list-none space-y-2 pl-0'>
+          {item.highlights!.map((highlight) => (
+            <li class='flex items-start gap-3 text-base text-base-content/90'>
+              <svg class='w-4 h-4 text-success mt-1 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+                <path fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'></path>
+              </svg>
+              <span>{highlight}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {/* Technical Details Grid */}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-base-200">
+      
+      {/* Models & Methods */}
+      {(data.hasModels || data.hasMethods) && (
+        <div class="space-y-4">
+          {data.hasModels && (
+            <div>
+              <h4 class='text-sm font-semibold text-base-content mb-2 uppercase tracking-wide'>Models Tested</h4>
+              <div class='flex flex-wrap gap-2'>
+                {item.models_tested!.map((model) => (
+                  <span class='px-3 py-1 bg-info/10 text-info text-xs font-medium rounded-full'>
+                    {model}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.hasMethods && (
+            <div>
+              <h4 class='text-sm font-semibold text-base-content mb-2 uppercase tracking-wide mt-4'>Methods Used</h4>
+              <div class='flex flex-wrap gap-2'>
+                {item.methods_used!.map((method) => (
+                  <span class='px-3 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full'>
+                    {method}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Dataset & Comparison Models */}
+      <div class="space-y-4">
+        {/* Dataset */}
+        {(data.hasDataset || data.hasDatasetSource) && (
+          <div>
+            <h4 class='text-sm font-semibold text-base-content mb-2 uppercase tracking-wide'>Dataset</h4>
+            <div class='bg-base-200 p-3 rounded-lg flex justify-between items-center'>
+              {data.hasDataset && (
+                <p class='text-sm text-base-content font-medium'>{item.dataset}</p>
+              )}
+              {data.hasDatasetSource && (
+                <a
+                  href={item.dataset_source}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  class='text-xs text-primary hover:text-primary-focus hover:underline ml-4 flex-shrink-0'
+                >
+                  Source →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Comparison Models */}
+        {data.hasComparisonModels && (
+          <div>
+            <h4 class='text-sm font-semibold text-base-content mb-2 uppercase tracking-wide'>Comparison Models</h4>
+            <div class='flex flex-wrap gap-2'>
+              {item.comparison_models!.map((model) => (
+                <span class='px-2.5 py-1 bg-base-300 text-base-content/80 text-xs rounded-md'>
+                  {model}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    
+    {/* Metrics & Results Summary */}
+    {(hasAnyMetrics || data.hasResultsSummary) && (
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-base-200">
+        
+        {hasAnyMetrics && (
+          <div>
+            <h4 class='text-sm font-semibold text-base-content mb-2 uppercase tracking-wide'>Evaluation Metrics</h4>
+            <div class='flex flex-wrap gap-2'>
+              {allMetrics.map((metric) => (
+                <span class='px-3 py-1 bg-warning/10 text-warning text-xs rounded-full border border-warning/20 font-medium'>
+                  {metric}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {data.hasResultsSummary && (
+          <div>
+            <h4 class='text-sm font-semibold text-base-content mb-2 uppercase tracking-wide'>Key Result</h4>
+            <p class='text-sm text-base-content/80 leading-relaxed bg-base-200 p-3 rounded-lg'>
+              {item.results_summary}
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Objectives */}
+    {data.hasObjectives && (
+      <div class='pt-4 border-t border-base-200 space-y-3'>
+        <h4 class='text-sm font-bold text-base-content uppercase tracking-widest flex items-center gap-2'>
+          <svg class='w-4 h-4 text-secondary' fill='currentColor' viewBox='0 0 20 20'>
+            <path d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z'></path>
+          </svg>
+          Research Objectives
+        </h4>
+        <ul class='list-disc space-y-2 pl-5 text-base text-base-content/80'>
+          {item.objectives!.map((objective) => (
+            <li class='pl-1'>{objective}</li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+  
+  {/* Footer with Tags and Links */}
+  <div class='bg-base-200 px-6 py-4 md:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+    {/* Tags */}
+    {data.hasTags && (
+      <div class='flex flex-wrap gap-2'>
+        {item.tags!.map((tag) => (
+          <span class='px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full hover:bg-primary/20 transition-colors'>
+            #{tag}
+          </span>
+        ))}
+      </div>
+    )}
+
+    {/* Links */}
+    {(data.hasUrl || data.hasPdfUrl || data.hasGithubUrl || data.hasDoi) && (
+      <div class='flex flex-wrap gap-3 sm:justify-end'>
+        {data.hasUrl && (
+          <a
+            href={item.url}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-primary gap-2'
+          >
+            <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+              <path d='M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z'></path>
+            </svg>
+            Publication
+          </a>
+        )}
+
+        {data.hasPdfUrl && (
+          <a
+            href={item.pdf_url}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-secondary btn-outline gap-2'
+          >
+            <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z'></path>
+            </svg>
+            PDF
+          </a>
+        )}
+
+        {data.hasGithubUrl && (
+          <a
+            href={item.github_url}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-outline gap-2'
+          >
+            <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'><path d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z'></path></svg>
+            Code
+          </a>
+        )}
+
+        {data.hasDoi && (
+          <a
+            href={`https://doi.org/${item.doi}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-ghost gap-2'
+          >
+            <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1'></path>
+            </svg>
+            DOI
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</article>
+
+<style>
+  /* Keep the original hover effect for a sense of lift/depth */
+  .research-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .research-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.12);
+  }
+</style>

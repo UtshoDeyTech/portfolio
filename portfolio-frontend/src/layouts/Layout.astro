@@ -1,0 +1,251 @@
+---
+import { ClientRouter } from 'astro:transitions';
+
+import BetterIcon from '../components/ui/BetterIcon.astro'
+import Navbar from '../components/ui/Navbar.astro'
+import Head from '../components/Head.astro'
+import FloatingSocialIcons from '../components/ui/FloatingSocialIcons.astro'
+
+import { seo, profile, template } from '../settings'
+import Footer from '../components/ui/Footer.astro'
+
+type Props = {
+	title?: string
+	description?: string
+	image?: string
+}
+
+const {
+	title = seo.default_title,
+	description = seo.default_description,
+	image = seo.default_image,
+} = Astro.props
+---
+
+<!doctype html>
+<html lang='en' data-theme="dark">
+	<head>
+		{template.transitions && <ClientRouter /> }
+
+		<Head title={title} description={description} image={image} />
+	</head>
+	<body>
+		<div class={`bg-base-100 drawer lg:drawer-open ${template.menu_left ? 'drawer-end' : ''}`} id="main-container">
+			<input id='my-drawer' type='checkbox' class='drawer-toggle' />
+			<!-- Drawer content -->
+            <div class='drawer-content bg-base-100 transition-all duration-300 ease-in-out' id="drawer-content">
+				<div class='bg-base-100 z-50 text-base-content shadow-sm'>
+					<nav class='navbar'>
+						<div class='navbar-start'>
+							<label for='my-drawer' class='btn btn-square btn-ghost lg:hidden'>
+								<BetterIcon>
+									<svg
+										xmlns='http://www.w3.org/2000/svg'
+										fill='none'
+										viewBox='0 0 24 24'
+										stroke-width='1.5'
+										class='size-6 stroke-current'
+									>
+										<path
+											stroke-linecap='round'
+											stroke-linejoin='round'
+											d='M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'></path>
+									</svg>
+								</BetterIcon>
+							</label>
+						</div>
+						<div class='navbar-center lg:hidden text-lg font-black'>
+							{profile.title}
+							{profile.fullName}
+						</div>
+						<div class='navbar-end'>
+						</div>
+					</nav>
+				</div>
+                <main class='main-content p-8 pt-10 lg:pt-16 lg:max-w-5xl max-w-full mx-auto min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out'>
+					<!-- Page content -->
+					<slot />
+				<Footer />
+				</main>
+			</div>
+			<!-- Drawer side -->
+			<div class='drawer-side z-40'>
+				<label for='my-drawer' aria-label='close sidebar' class='drawer-overlay'
+				></label>
+				<Navbar />
+			</div>
+		</div>
+
+		<!-- Floating Social Icons (shows when navbar is collapsed) -->
+		<div id='floating-social' class='floating-social-container'>
+			<div class='floating-social-content'>
+				<FloatingSocialIcons />
+			</div>
+		</div>
+	</body>
+</html>
+
+<style>
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--my-color: #252b30;
+		}
+	}
+	html,
+	body {
+		margin: 0;
+		width: 100%;
+		height: 100%;
+	}
+	
+	/* Desktop layout adjustments */
+	@media (min-width: 1024px) {
+		.drawer-open .drawer-content {
+			margin-left: 20rem; /* Default expanded width */
+			transition: margin-left 0.3s ease-in-out;
+		}
+
+		/* When navbar is collapsed */
+		.drawer-open .navbar-collapsed .drawer-content {
+			margin-left: 5rem !important;
+		}
+	}
+
+	/* Floating Social Icons */
+	.floating-social-container {
+		position: fixed;
+		bottom: 1rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 9999;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+		pointer-events: none;
+		max-width: calc(100vw - 2rem);
+		width: auto;
+	}
+
+	.floating-social-container.show {
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
+	}
+
+	.floating-social-content {
+		background: hsl(var(--b2) / 0.95);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		border: 1px solid hsl(var(--bc) / 0.1);
+		border-radius: 1rem;
+		padding: 0.75rem 1.5rem;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+		overflow-x: auto;
+		overflow-y: hidden;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none; /* Firefox */
+		-ms-overflow-style: none; /* IE/Edge */
+	}
+
+	/* Hide scrollbar for Chrome, Safari */
+	.floating-social-content::-webkit-scrollbar {
+		display: none;
+	}
+
+
+	/* Adjust for smaller screens */
+	@media (max-width: 768px) {
+		.floating-social-container {
+			max-width: calc(100vw - 1rem);
+		}
+
+		.floating-social-content {
+			padding: 0.5rem 1rem;
+			max-width: 90vw;
+		}
+
+		.floating-social-content > div {
+			gap: 0.25rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.floating-social-content {
+			padding: 0.5rem 0.75rem;
+			max-width: 85vw;
+		}
+	}
+</style>
+
+<script is:inline>
+	// Handle navbar toggle for layout adjustments - works with View Transitions
+	function setupNavbarObserver() {
+		const navbar = document.querySelector('.navbar-container');
+		const mainContainer = document.querySelector('#main-container');
+		const floatingSocial = document.getElementById('floating-social');
+
+		function updateFloatingSocial(isCollapsed) {
+			if (!floatingSocial) return;
+
+			if (isCollapsed) {
+				// Show floating social when collapsed on ALL devices
+				floatingSocial.classList.add('show');
+			} else {
+				// Hide floating social when expanded
+				floatingSocial.classList.remove('show');
+			}
+		}
+
+		if (navbar && mainContainer) {
+			// Load and apply saved state from localStorage
+			const savedState = localStorage.getItem('navbar-collapsed');
+			const isCollapsed = savedState === 'true';
+
+			// Apply state to navbar
+			navbar.setAttribute('data-collapsed', isCollapsed ? 'true' : 'false');
+
+			// Apply state to main container
+			if (isCollapsed) {
+				mainContainer.classList.add('navbar-collapsed');
+			} else {
+				mainContainer.classList.remove('navbar-collapsed');
+			}
+
+			// Update floating social initial state
+			updateFloatingSocial(isCollapsed);
+
+			// Set up mutation observer to watch for navbar changes
+			const observer = new MutationObserver(function(mutations) {
+				mutations.forEach(function(mutation) {
+					if (mutation.type === 'attributes' && mutation.attributeName === 'data-collapsed') {
+						const isCollapsed = navbar.getAttribute('data-collapsed') === 'true';
+
+						if (isCollapsed) {
+							mainContainer.classList.add('navbar-collapsed');
+						} else {
+							mainContainer.classList.remove('navbar-collapsed');
+						}
+
+						updateFloatingSocial(isCollapsed);
+					}
+				});
+			});
+
+			observer.observe(navbar, {
+				attributes: true,
+				attributeFilter: ['data-collapsed']
+			});
+
+			// Handle window resize
+			window.addEventListener('resize', function() {
+				const isCollapsed = navbar.getAttribute('data-collapsed') === 'true';
+				updateFloatingSocial(isCollapsed);
+			});
+		}
+	}
+
+	// Run on both initial load and View Transitions navigation
+	document.addEventListener('DOMContentLoaded', setupNavbarObserver);
+	document.addEventListener('astro:page-load', setupNavbarObserver);
+	document.addEventListener('astro:after-swap', setupNavbarObserver);
+</script>

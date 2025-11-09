@@ -1,0 +1,357 @@
+---
+// NOTE: Recreating a placeholder interface based on the usage, as the original 
+// import path is external. 
+interface ProjectItem {
+  title?: string;
+  organization?: string;
+  role?: string;
+  type?: 'Professional' | 'Academic' | 'Personal' | string;
+  short_description?: string;
+  description?: string;
+  responsibilities?: string[];
+  achievements?: string[];
+  features?: string[];
+  skills?: string[];
+  tech_stack?: { [key: string]: string[] | string };
+  datasets?: string[];
+  accuracy?: string; // e.g., "98.5%"
+  project_url?: string;
+  github_url?: string;
+  demo_url?: string;
+  collaboration?: string;
+  tags?: string[];
+  start_date?: string;
+  end_date?: string;
+  contributor_count?: number;
+}
+
+interface Props {
+  item: ProjectItem;
+}
+
+const { item } = Astro.props;
+
+// Builder pattern: only include elements if data exists
+const hasTitle = item.title && item.title.trim() !== '';
+const hasOrganization = item.organization && item.organization.trim() !== '';
+const hasRole = item.role && item.role.trim() !== '';
+const hasType = item.type && item.type.trim() !== '';
+const hasShortDescription = item.short_description && item.short_description.trim() !== '';
+const hasDescription = item.description && item.description.trim() !== '';
+const hasResponsibilities = item.responsibilities && item.responsibilities.length > 0;
+const hasAchievements = item.achievements && item.achievements.length > 0;
+const hasFeatures = item.features && item.features.length > 0;
+const hasSkills = item.skills && item.skills.length > 0;
+const hasTechStack = item.tech_stack && Object.keys(item.tech_stack).length > 0;
+const hasDatasets = item.datasets && item.datasets.length > 0;
+const hasAccuracy = item.accuracy && item.accuracy.trim() !== '';
+const hasProjectUrl = item.project_url && item.project_url.trim() !== '';
+const hasGithubUrl = item.github_url && item.github_url.trim() !== '';
+const hasDemoUrl = item.demo_url && item.demo_url.trim() !== '';
+const hasCollaboration = item.collaboration && item.collaboration.trim() !== '';
+const hasTags = item.tags && item.tags.length > 0;
+const hasStartDate = item.start_date && item.start_date.trim() !== '';
+const hasEndDate = item.end_date && item.end_date.trim() !== '';
+const hasContributors = item.contributor_count && item.contributor_count > 0;
+const hasCoverImage = (item as any).cover_image && (item as any).cover_image.trim() !== '';
+
+// Build date range
+const dateRange = hasStartDate || hasEndDate
+  ? `${hasStartDate ? item.start_date : 'N/A'} - ${hasEndDate ? item.end_date : 'N/A'}`
+  : null;
+
+// Get project type color and style
+const getTypeStyle = () => {
+  if (!hasType) return { color: 'neutral', badge: 'bg-base-300 text-base-content border-base-content/50' };
+  const type = item.type!.toLowerCase();
+  // Using specific Tailwind classes that correspond to a theme's color palette (primary, secondary, etc.)
+  if (type.includes('professional')) return { color: 'primary', badge: 'bg-primary/20 text-primary border-primary/50' };
+  if (type.includes('academic')) return { color: 'secondary', badge: 'bg-secondary/20 text-secondary border-secondary/50' };
+  if (type.includes('personal')) return { color: 'accent', badge: 'bg-accent/20 text-accent border-accent/50' };
+  return { color: 'neutral', badge: 'bg-base-300 text-base-content border-base-content/50' };
+};
+
+const { color: typeColor, badge: typeBadgeClass } = getTypeStyle();
+
+// Function to convert accuracy string ("98.5%") to a percentage number (98.5)
+const getAccuracyPercentage = (acc: string | undefined): number => {
+    if (!acc) return 0;
+    const cleanAcc = acc.replace(/[^0-9.]/g, '');
+    return Math.min(100, parseFloat(cleanAcc) || 0);
+};
+
+const accuracyPercentage = getAccuracyPercentage(item.accuracy);
+---
+
+<!-- Wrapper div uses the determined primary color for a subtle outer border effect -->
+<!-- The inline style targets the theme's colors via CSS variables for compatibility with daisyUI/Tailwind -->
+<div class='project-card-wrapper p-1 rounded-2xl shadow-xl transition-all duration-500 hover:shadow-2xl mb-6'
+     style={`border: 2px solid var(--fallback-${typeColor}, ${typeColor});`}>
+
+  <div class='project-card bg-base-100 rounded-xl overflow-hidden group border-2 border-base-200'>
+
+    {hasCoverImage && (
+      <div class='w-full h-40 overflow-hidden'>
+        <img src={(item as any).cover_image} alt={item.title ?? 'Project image'} class='w-full h-full object-cover' />
+      </div>
+    )}
+
+    <!-- Header Block: Title, Role, Organization, and Key Metrics -->
+    <div class='p-4 sm:p-6 bg-base-200/50 border-b border-base-300/80'>
+      <div class='flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4'>
+        
+        <!-- Type Badge (Prominent) -->
+        {hasType && (
+          <span class={`px-4 py-1 text-sm font-semibold rounded-full border ${typeBadgeClass}`}>
+            {item.type}
+          </span>
+        )}
+
+        {/* Date Range and Contributors */}
+        <div class='flex items-center gap-4 text-sm font-medium text-base-content/70'>
+          {dateRange && (
+            <span class='flex items-center gap-1.5'>
+              <svg class='w-4 h-4 text-base-content/50' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'></path></svg>
+              {dateRange}
+            </span>
+          )}
+          {hasContributors && (
+            <span class='flex items-center gap-1.5'>
+              <svg class='w-4 h-4 text-base-content/50' fill='currentColor' viewBox='0 0 20 20'><path d='M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z'></path></svg>
+              {item.contributor_count}
+            </span>
+          )}
+        </div>
+      </div>
+      
+      <!-- Primary Text Group -->
+      {hasTitle && (
+        <h3 class='text-xl sm:text-2xl md:text-3xl font-extrabold text-base-content leading-snug mb-1'>
+          {item.title}
+        </h3>
+      )}
+
+      {hasRole && (
+        <p class={`text-sm sm:text-base md:text-lg font-semibold mb-2 capitalize text-${typeColor}/80`}>
+          {item.role}
+          {hasOrganization && (
+            <span class='text-xs sm:text-sm md:text-base font-normal text-base-content/60 ml-2'>
+              @ {item.organization}
+            </span>
+          )}
+        </p>
+      )}
+
+      {/* Accuracy Metric (if provided) - Visual Progress Bar */}
+      {hasAccuracy && (
+        <div class='mt-4 pt-3 border-t border-base-300'>
+            <label class='text-sm font-semibold text-base-content/70 flex justify-between mb-1'>
+                Model Performance
+                <span class='font-extrabold text-lg text-success'>{item.accuracy}</span>
+            </label>
+            <progress class={`progress progress-success w-full h-2`} value={accuracyPercentage} max="100"></progress>
+        </div>
+      )}
+    </div>
+
+    <!-- Main Content Section -->
+    <div class='p-4 sm:p-6 space-y-4 sm:space-y-6 md:space-y-8'>
+      
+      {/* Short/Long Description */}
+      {(hasShortDescription || hasDescription) && (
+        <div class='bg-base-200 p-4 rounded-lg border border-base-300'>
+          <p class='text-base-content/90 leading-relaxed text-sm'>
+            {hasShortDescription ? item.short_description : item.description}
+          </p>
+        </div>
+      )}
+
+      {/* Collaboration Callout */}
+      {hasCollaboration && (
+        <div class='alert bg-info/10 text-info border border-info/30 shadow-md !p-4'>
+          <svg class='w-5 h-5 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'><path d='M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z'></path></svg>
+          <span class='text-sm font-medium'>{item.collaboration}</span>
+        </div>
+      )}
+
+      {/* Achievements and Responsibilities - Two Columns on Desktop */}
+      <div class='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          
+        {/* Achievements (Highlighted) */}
+        {hasAchievements && (
+          <div class='achievement-list bg-success/5 p-4 rounded-lg border border-success/30'>
+            <h4 class='text-sm font-bold uppercase tracking-wider text-success mb-3 flex items-center gap-2'>
+              <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'><path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z'></path></svg>
+              Key Achievements
+            </h4>
+            <ul class='space-y-2'>
+              {item.achievements!.map((achievement) => (
+                <li class='flex items-start gap-2 text-sm text-base-content/90'>
+                  <span class='text-success font-bold text-lg leading-none flex-shrink-0 mt-[-2px]'>&bull;</span>
+                  <span class='leading-snug'>{achievement}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {/* Responsibilities / Features */}
+        {(hasResponsibilities || hasFeatures) && (
+          <div class='p-4 rounded-lg border border-base-300 bg-base-200/50'>
+            <h4 class='text-sm font-bold uppercase tracking-wider text-base-content/80 mb-3 flex items-center gap-2'>
+              <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z' clip-rule='evenodd'></path></svg>
+              {hasResponsibilities ? 'Responsibilities' : 'Features'}
+            </h4>
+            <ul class='space-y-2'>
+              {(hasResponsibilities ? item.responsibilities : item.features)?.map((point) => (
+                <li class='flex items-start gap-2 text-sm text-base-content/80'>
+                  <span class='text-primary font-bold text-lg leading-none flex-shrink-0 mt-[-2px]'>&bull;</span>
+                  <span class='leading-snug'>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Datasets / ML Focus */}
+      {hasDatasets && (
+        <div class='pt-4 border-t border-base-300'>
+          <h4 class='text-sm font-bold uppercase tracking-wider text-base-content/60 mb-2 flex items-center gap-2'>
+            <svg class='w-4 h-4 text-warning' fill='currentColor' viewBox='0 0 20 20'><path d='M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z'></path><path d='M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z'></path><path d='M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z'></path></svg>
+            Data Sources
+          </h4>
+          <div class='flex flex-wrap gap-2'>
+            {item.datasets!.map((dataset) => (
+              <span class='px-3 py-1 bg-warning/10 text-warning text-xs font-medium rounded-full border border-warning/20 hover:bg-warning/20 transition-colors'>
+                {dataset}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tech Stack and Skills - Grouped at the bottom */}
+      <div class='pt-4 border-t border-base-300'>
+          <h4 class='text-sm font-bold uppercase tracking-wider text-base-content/60 mb-3 flex items-center gap-2'>
+            <svg class='w-4 h-4 text-secondary' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z' clip-rule='evenodd'></path></svg>
+            Technology & Expertise
+          </h4>
+
+          {/* Tech Stack (Grouped by Category) */}
+          {hasTechStack && (
+            <div class='space-y-3 mb-4'>
+              {Object.entries(item.tech_stack!).map(([category, techs]) => {
+                  const techArray = Array.isArray(techs) ? techs : (typeof techs === 'string' && techs.trim() !== '' ? [techs] : []);
+                  if (techArray.length === 0) return null;
+                  return (
+                    <div>
+                      <div class='text-xs text-base-content/60 uppercase font-bold mb-1'>
+                        {category.replace(/_/g, ' ')}
+                      </div>
+                      <div class='flex flex-wrap gap-1.5'>
+                        {techArray.map((tech) => (
+                          <span class='px-3 py-1 bg-secondary/10 text-secondary text-xs font-medium rounded-full border border-secondary/20 hover:bg-secondary/20 transition-colors'>
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+              })}
+            </div>
+          )}
+          
+          {/* Skills */}
+          {hasSkills && (
+            <div class='mt-4'>
+              <div class='text-xs text-base-content/60 uppercase font-bold mb-1'>
+                Core Skills
+              </div>
+              <div class='flex flex-wrap gap-1.5'>
+                {item.skills!.map((skill) => (
+                  <span class='px-3 py-1 bg-accent/10 text-accent text-xs font-medium rounded-full border border-accent/20 hover:bg-accent/20 transition-colors'>
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+      </div>
+    </div>
+
+    <!-- Footer with Links & Tags -->
+    <div class='bg-base-200 px-4 sm:px-6 py-3 sm:py-4 border-t border-base-300 flex flex-col md:flex-row justify-between md:items-center gap-3 sm:gap-4'>
+      
+      {/* Action Buttons */}
+      <div class='flex flex-wrap gap-3'>
+        {hasDemoUrl && (
+          <a
+            href={item.demo_url}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-secondary gap-2 hover:shadow-lg'
+          >
+            <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z'></path><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 12a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg>
+            View Demo
+          </a>
+        )}
+        
+        {hasGithubUrl && (
+          <a
+            href={item.github_url}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-outline btn-neutral gap-2'
+          >
+            <svg class='w-4 h-4' fill='currentColor' viewBox='0 0 24 24'><path d='M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z'></path></svg>
+            View Code
+          </a>
+        )}
+        
+        {hasProjectUrl && (
+          <a
+            href={item.project_url}
+            target='_blank'
+            rel='noopener noreferrer'
+            class='btn btn-sm btn-outline gap-2'
+          >
+            <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14'></path></svg>
+            Project Site
+          </a>
+        )}
+      </div>
+
+      {/* Tags */}
+      {hasTags && (
+        <div class='flex flex-wrap gap-2 md:justify-end'>
+          {item.tags!.map((tag) => (
+            <span class='px-3 py-1 bg-base-300 text-base-content/70 text-xs font-medium rounded-lg hover:bg-base-content/10 transition-colors'>
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
+<style>
+  .project-card-wrapper {
+    /* Set up the variable to be used in the inline style for the border */
+    /* This ensures that the color variables are available for the inline style attribute */
+    --primary: theme('colors.primary');
+    --secondary: theme('colors.secondary');
+    --accent: theme('colors.accent');
+    --neutral: theme('colors.neutral');
+
+    /* Subtle animation on hover */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .project-card-wrapper:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2), 0 6px 12px rgba(0, 0, 0, 0.12);
+  }
+</style>

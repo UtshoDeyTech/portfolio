@@ -1,0 +1,172 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import { fetchBlogPosts, fetchBlogPostBySlug } from '@/data/blogs'
+import BlogInteractions from '@/components/react/BlogInteractions'
+import CommentSection from '@/components/react/CommentSection'
+
+export async function getStaticPaths() {
+    const blogPosts = await fetchBlogPosts();
+
+    return blogPosts
+        .filter(post => post.is_published !== false && post.slug)
+        .map(post => ({
+            params: { slug: post.slug! },
+            props: { post },
+        }));
+}
+
+const { slug } = Astro.params;
+const post = await fetchBlogPostBySlug(slug!);
+
+if (!post) {
+    return Astro.redirect('/blog');
+}
+
+const {
+    title,
+    subtitle,
+    author,
+    published_date,
+    tags,
+    cover_image,
+    content_html,
+    views,
+    likes,
+    comments_count,
+    read_time,
+    category,
+    allow_comments
+} = post;
+---
+
+<Layout title={title}>
+	<div class='max-w-4xl mx-auto'>
+		<!-- Cover Image -->
+		{cover_image && (
+			<img
+				src={cover_image}
+				alt={title}
+				class='w-full h-96 object-cover rounded-xl mb-8'
+			/>
+		)}
+
+		<article
+			class='prose max-w-none prose-headings:text-base-content prose-p:text-base-content/80'
+		>
+			<!-- Header section -->
+			<div class='mb-8 border-b pb-8'>
+				<h1 class='text-4xl font-bold mb-4 text-base-content'>{title}</h1>
+				{subtitle && (
+					<p class='text-xl text-base-content/70 mb-4'>{subtitle}</p>
+				)}
+
+				<div class='flex flex-wrap items-center gap-4 text-base-content/70'>
+					<!-- Author -->
+					{author && (
+						<div class='flex items-center gap-2'>
+							<svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+								<path fill-rule='evenodd' d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z' clip-rule='evenodd'></path>
+							</svg>
+							<span>{author}</span>
+						</div>
+					)}
+
+					<!-- Date -->
+					{published_date && (
+						<time datetime={published_date} class='flex items-center'>
+							<svg
+								class='h-4 w-4 mr-2'
+								fill='none'
+								viewBox='0 0 24 24'
+								stroke='currentColor'
+							>
+								<path
+									stroke-linecap='round'
+									stroke-linejoin='round'
+									stroke-width='2'
+									d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
+								></path>
+							</svg>
+							{new Date(published_date).toLocaleDateString('en-US', {
+								year: 'numeric',
+								month: 'long',
+								day: 'numeric',
+							})}
+						</time>
+					)}
+
+					<!-- Read Time -->
+					{read_time && (
+						<div class='flex items-center gap-2'>
+							<svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+								<path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z' clip-rule='evenodd'></path>
+							</svg>
+							<span>{read_time} min read</span>
+						</div>
+					)}
+
+					<!-- Category -->
+					{category && (
+						<span class='badge badge-primary'>{category}</span>
+					)}
+				</div>
+
+				<!-- Tags -->
+				{tags && tags.length > 0 && (
+					<div class='flex flex-wrap gap-2 mt-4'>
+						{tags.map(tag => (
+							<span class='badge badge-accent badge-outline'>{tag}</span>
+						))}
+					</div>
+				)}
+
+				<!-- Engagement Stats - Interactive -->
+				<BlogInteractions
+					client:load
+					slug={slug!}
+					initialViews={views || 0}
+					initialLikes={likes || 0}
+				/>
+			</div>
+
+			<!-- Post content -->
+			<div
+				class='prose mt-8 prose-h2:text-2xl prose-h2:font-bold prose-h2:mb-4
+         prose-h3:text-xl prose-h3:font-semibold prose-h3:mb-3
+         prose-p:mb-4 prose-p:leading-relaxed
+         prose-strong:text-base-content prose-strong:font-bold
+         prose-em:italic
+         prose-a:text-accent prose-a:no-underline hover:prose-a:underline
+         prose-code:text-accent prose-code:bg-base-200 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+         prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:pl-4 prose-blockquote:italic
+         prose-ul:list-disc prose-ul:pl-6
+         prose-ol:list-decimal prose-ol:pl-6
+         prose-li:mb-2
+         prose-img:rounded-lg prose-img:my-8
+         prose-table:w-full prose-table:border-collapse
+         prose-th:border prose-th:border-base-300 prose-th:bg-base-200 prose-th:px-4 prose-th:py-2
+         prose-td:border prose-td:border-base-300 prose-td:px-4 prose-td:py-2'
+        >
+				{content_html && <div set:html={content_html} />}
+			</div>
+
+			<!-- Comments Section -->
+			<CommentSection
+				client:load
+				slug={slug!}
+				allowComments={allow_comments ?? true}
+				initialCommentsCount={comments_count || 0}
+			/>
+
+			<!-- Back to Blog Link -->
+			<div class='mt-12 pt-8 border-t'>
+				<a href='/blog' class='btn btn-outline gap-2'>
+					<svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+						<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 19l-7-7m0 0l7-7m-7 7h18'></path>
+					</svg>
+					Back to Blog
+				</a>
+			</div>
+		</article>
+	</div>
+</Layout>

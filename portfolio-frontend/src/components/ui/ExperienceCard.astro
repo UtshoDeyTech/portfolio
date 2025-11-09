@@ -1,0 +1,232 @@
+---
+// NOTE: Interface declarations in the frontmatter
+// Define the shape of our experience item data
+interface ExperienceItem {
+  company_logo_url: string;
+  company_name: string;
+  role: string;
+  employment_type: string;
+  location: string;
+  work_mode: 'Remote' | 'On-Site' | 'Hybrid';
+  description: string;
+  achievements: string[];
+  skills: string[];
+  tech_stack: string[];
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+};
+
+interface Props {
+  item: ExperienceItem;
+  isLast?: boolean;
+}
+
+const { item, isLast = false } = Astro.props;
+
+// Data validation helpers
+const hasLogo = item.company_logo_url && item.company_logo_url.trim() !== '';
+const hasCompanyName = item.company_name && item.company_name.trim() !== '';
+const hasRole = item.role && item.role.trim() !== '';
+const hasEmploymentType = item.employment_type && item.employment_type.trim() !== ''; 
+const hasLocation = item.location && item.location.trim() !== '';
+const hasDescription = item.description && item.description.trim() !== '';
+const hasAchievements = item.achievements && item.achievements.length > 0;
+const hasSkills = item.skills && item.skills.length > 0; 
+const hasTechStack = item.tech_stack && item.tech_stack.length > 0;
+const hasStartDate = item.start_date && item.start_date.trim() !== '';
+const hasEndDate = item.end_date && item.end_date.trim() !== '';
+
+// Build date range string
+const dateRange = hasStartDate || hasEndDate
+  ? `${hasStartDate ? item.start_date : 'N/A'} - ${
+      item.is_current ? 'Present' : hasEndDate ? item.end_date : 'N/A'
+    }`
+  : null;
+
+// Calculate duration (improved formatting)
+const calculateDuration = () => {
+  if (!hasStartDate) return null;
+  try {
+    const start = new Date(item.start_date!);
+    const end = item.is_current ? new Date() : hasEndDate ? new Date(item.end_date!) : new Date();
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (months < 1) return "Less than 1 mo";
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} yr${years > 1 ? 's' : ''}`);
+    if (remainingMonths > 0) parts.push(`${remainingMonths} mo${remainingMonths > 1 ? 's' : ''}`);
+    
+    return parts.join(' ');
+  } catch (e) {
+    console.error("Date calculation failed:", e);
+    return null;
+  }
+};
+
+const duration = calculateDuration();
+
+// Utility for dynamically choosing badge style based on employment type
+const getEmploymentTypeStyle = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('full-time')) return 'bg-success/20 text-success border-success/50';
+    if (lowerType.includes('contract') || lowerType.includes('freelance')) return 'bg-warning/20 text-warning border-warning/50';
+    return 'bg-info/20 text-info border-info/50';
+};
+---
+
+<div class='experience-item relative pt-6 sm:pt-0 mb-6'>
+  
+  <!-- Active Job Indicator -->
+  {item.is_current && (
+    <div class="absolute top-2 right-2 z-20">
+      <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-primary-content shadow-md">
+        Active
+      </span>
+    </div>
+  )}
+
+  <!-- The Executive Card Container -->
+  <div class='executive-card bg-base-100 rounded-2xl shadow-xl transition-all duration-500 border-2 border-base-300 overflow-hidden backdrop-blur-sm transform hover:scale-[1.01] hover:shadow-2xl'>
+
+    <!-- Header Block: Role, Company, and Logo (if exists) -->
+    <div class='relative p-4 sm:p-6 bg-base-200/50 border-b border-base-300/80'>
+
+      <!-- Company Logo as a prominent badge -->
+      {hasLogo && (
+        <div class='absolute right-3 top-3 sm:right-6 sm:top-6 w-12 h-12 sm:w-16 sm:h-16 bg-base-100 rounded-xl shadow-lg overflow-hidden p-1.5 sm:p-2 border border-base-300'>
+          <img
+            src={item.company_logo_url}
+            alt={`${hasCompanyName ? item.company_name : 'Company'} logo`}
+            class='w-full h-full object-contain'
+            onerror="this.onerror=null;this.src='https://placehold.co/64x64/CBD5E1/475569?text=Logo'"
+          />
+        </div>
+      )}
+
+      <div class='max-w-[calc(100%-60px)] sm:max-w-[calc(100%-80px)]'>
+        <div class='flex items-center gap-2 sm:gap-3 mb-1 flex-wrap'>
+          {hasRole && (
+            <h3 class='text-lg sm:text-2xl md:text-3xl font-extrabold text-base-content leading-snug'>
+              {item.role}
+            </h3>
+          )}
+          {/* NEW: Employment Type Badge */}
+          {hasEmploymentType && (
+            <span class={`px-2 py-0.5 sm:px-3 sm:py-1 text-xs sm:text-sm font-semibold rounded-full border hidden sm:inline-block ${getEmploymentTypeStyle(item.employment_type)}`}>
+              {item.employment_type}
+            </span>
+          )}
+        </div>
+
+        {hasCompanyName && (
+          <p class='text-sm sm:text-lg md:text-xl font-semibold text-primary/90'>
+            {item.company_name}
+          </p>
+        )}
+      </div>
+
+      <!-- Compact Metadata Row -->
+      <div class='flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 mt-3 sm:mt-4 text-xs sm:text-sm font-medium text-base-content/80'>
+        
+        {/* Date Range */}
+        {dateRange && (
+          <span class='flex items-center gap-1.5'>
+            <svg class='w-4 h-4 text-secondary' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'></path></svg>
+            {dateRange}
+          </span>
+        )}
+
+        {/* Duration */}
+        {duration && (
+          <span class='flex items-center gap-1.5'>
+            <svg class='w-4 h-4 text-secondary' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'></path></svg>
+            {duration}
+          </span>
+        )}
+
+        {/* Location / Work Mode */}
+        {hasLocation && (
+          <span class='flex items-center gap-1.5'>
+            <svg class='w-4 h-4 text-secondary' fill='currentColor' viewBox='0 0 24 24'>
+               <path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/>
+            </svg>
+            {item.location} ({item.work_mode})
+          </span>
+        )}
+      </div>
+    </div>
+    
+    <!-- Main Content Block -->
+    <div class='p-4 sm:p-6'>
+
+      {/* Description */}
+      {hasDescription && (
+        <div class='mb-4 sm:mb-6'>
+          <h4 class='text-xs sm:text-sm font-bold uppercase tracking-wider text-base-content/60 mb-2'>Summary</h4>
+          <p class='text-base-content/90 leading-relaxed text-xs sm:text-sm'>
+            {item.description}
+          </p>
+        </div>
+      )}
+
+      <!-- Achievements -->
+      {hasAchievements && (
+        <div class='mb-4 sm:mb-6'>
+          <h4 class='text-xs sm:text-sm font-bold uppercase tracking-wider text-base-content/60 mb-2'>Key Contributions</h4>
+          <ul class='space-y-1.5 sm:space-y-2 list-none p-0'>
+            {item.achievements!.map((achievement) => (
+              <li class='flex items-start gap-2 sm:gap-3 text-xs sm:text-sm text-base-content/90'>
+                <span class='text-primary font-bold flex-shrink-0'>&rarr;</span>
+                <span class='hover:text-base-content transition-colors leading-relaxed'>{achievement}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <!-- NEW: Skills / Competencies Section -->
+      {hasSkills && (
+        <div class='mb-4 sm:mb-6 pt-3 sm:pt-4 border-t border-base-200'>
+          <h4 class='text-xs sm:text-sm font-bold uppercase tracking-wider text-base-content/60 mb-2'>Skills / Competencies</h4>
+          <div class='flex flex-wrap gap-1.5 sm:gap-2'>
+            {item.skills!.map((skill) => (
+              <span class='px-2 py-0.5 sm:px-3 sm:py-1 bg-accent/10 text-accent text-xs font-medium rounded-full border border-accent/20 hover:bg-accent/20 transition-colors cursor-default'>
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    <!-- Footer Strip: Tech Stack -->
+    {hasTechStack && (
+      <div class='bg-base-300/50 p-3 sm:p-4 border-t border-base-300'>
+        <h4 class='text-xs font-bold uppercase tracking-wider text-base-content/60 mb-2'>Technologies Used</h4>
+        <div class='flex flex-wrap gap-1.5 sm:gap-2'>
+          {item.tech_stack!.map((tech) => (
+            <span class='px-2 py-0.5 sm:px-3 sm:py-1 bg-neutral/10 text-neutral-content/80 text-xs font-medium rounded-full border border-neutral/20 hover:bg-neutral/20 transition-colors cursor-default'>
+              {tech}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+
+<style>
+  .executive-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  /* I removed the hover effect that causes layout shift and opted for a more visual elevation */
+  .executive-card:hover {
+    /* transform: translateY(-4px); Use scale for a smoother, contained effect */
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.12);
+  }
+</style>

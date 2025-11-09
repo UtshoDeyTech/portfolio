@@ -1,0 +1,126 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ExperienceCard from '../components/ui/ExperienceCard.astro';
+import { getVisibleExperience, experienceData } from '@/data/experience';
+
+// Load visible experiences from API
+const visibleExperiences = await getVisibleExperience();
+
+// Calculate total years of experience
+const calculateTotalExperience = () => {
+  let totalMonths = 0;
+  visibleExperiences.forEach(exp => {
+    if (exp.start_date) {
+      const start = new Date(exp.start_date);
+      const end = exp.is_current ? new Date() : exp.end_date ? new Date(exp.end_date) : new Date();
+      const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      totalMonths += months;
+    }
+  });
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  return { years, months };
+};
+
+const totalExp = calculateTotalExperience();
+const page = experienceData.page || {};
+
+// Count current positions
+const currentPositions = visibleExperiences.filter(exp => exp.is_current).length;
+---
+
+<Layout>
+  <!-- Page Header -->
+  <section class='mb-12'>
+    <div class='flex flex-col md:flex-row items-start md:items-center justify-between gap-6'>
+      <div class='flex items-center gap-4'>
+        <div class='p-3 bg-primary/10 rounded-lg'>
+          <svg class='w-8 h-8 text-primary' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class='text-4xl font-bold text-base-content'>{page.title ?? 'Professional Experience'}</h1>
+          <p class='text-base-content/70 mt-2'>{page.subtitle ?? 'My career journey and professional accomplishments'}</p>
+        </div>
+      </div>
+
+      <!-- Experience Summary Cards -->
+      <div class='flex gap-4'>
+        <div class='bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg px-6 py-4 text-center'>
+          <div class='text-3xl font-bold text-primary'>
+            {totalExp.years}+
+          </div>
+            <div class='text-xs text-base-content/60 mt-1'>
+            {page.stats_labels?.years_experience ?? 'Years Experience'}
+          </div>
+        </div>
+
+        {currentPositions > 0 && (
+          <div class='bg-gradient-to-br from-success/10 to-success/5 border border-success/20 rounded-lg px-6 py-4 text-center'>
+            <div class='text-3xl font-bold text-success'>
+              {currentPositions}
+            </div>
+            <div class='text-xs text-base-content/60 mt-1'>
+              {page.stats_labels?.current_positions ?? (currentPositions === 1 ? 'Current Position' : 'Current Positions')}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <!-- Experience Timeline -->
+  <section class='space-y-8 relative'>
+    {visibleExperiences.length > 0 ? (
+      visibleExperiences.map((item, index) => (
+        <ExperienceCard
+          item={item}
+          isLast={index === visibleExperiences.length - 1}
+        />
+      ))
+    ) : (
+      <div class='text-center py-12 bg-base-200 rounded-lg'>
+        <svg class='w-16 h-16 mx-auto text-base-content/30 mb-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'></path>
+        </svg>
+        <p class='text-base-content/60'>No experience records available</p>
+      </div>
+    )}
+  </section>
+
+  <!-- Skills Summary Section (Optional) -->
+  {visibleExperiences.length > 0 && (
+    <section class='mt-16 pt-12 border-t border-base-300'>
+  <h2 class='text-2xl font-bold text-base-content mb-6 flex items-center gap-2'>
+        <svg class='w-6 h-6 text-primary' fill='currentColor' viewBox='0 0 20 20'>
+          <path d='M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z'></path>
+        </svg>
+        {page.skills_heading ?? 'All Skills Across Experiences'}
+      </h2>
+
+      <div class='flex flex-wrap gap-2'>
+        {Array.from(
+          new Set(
+            visibleExperiences
+              .flatMap(exp => exp.skills || [])
+              .filter(skill => skill && skill.trim() !== '')
+          )
+        ).sort().map((skill) => (
+          <span class='px-4 py-2 bg-primary/5 text-primary text-sm font-medium rounded-lg border border-primary/10 hover:bg-primary/10 transition-colors'>
+            {skill}
+          </span>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <!-- Metadata Info (Optional - for debugging) -->
+  <!--
+  <section class='mt-12 pt-8 border-t border-base-300'>
+    <p class='text-xs text-base-content/40 text-center'>
+      Last updated: {new Date(experienceData.metadata.updated_at).toLocaleDateString()}
+    </p>
+  </section>
+  -->
+</Layout>

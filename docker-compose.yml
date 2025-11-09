@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./portfolio-backend
+      dockerfile: Dockerfile
+    container_name: portfolio-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./portfolio-backend:/app
+      - /app/env
+      - ./.env:/app/.env
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - DJANGO_SETTINGS_MODULE=portfolio_backend.settings
+      - CORS_ALLOWED_ORIGINS=http://localhost:4321,http://127.0.0.1:4321,http://frontend:4321
+    networks:
+      - portfolio-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./portfolio-frontend
+      dockerfile: Dockerfile
+    container_name: portfolio-frontend
+    ports:
+      - "${FRONTEND_PORT:-4321}:4321"
+    volumes:
+      - ./portfolio-frontend:/app
+      - /app/node_modules
+      - /app/.astro
+    environment:
+      # PUBLIC_API_URL is used by browser (client-side JavaScript)
+      - PUBLIC_API_URL=${PUBLIC_API_URL:-http://localhost:8000}
+      # SERVER_API_URL is used by Astro server-side (within Docker network)
+      - SERVER_API_URL=${SERVER_API_URL:-http://backend:8000}
+      - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      - backend
+    networks:
+      - portfolio-network
+    restart: unless-stopped
+
+networks:
+  portfolio-network:
+    driver: bridge
