@@ -15,6 +15,8 @@ from .models import (
     Blog,
     BlogComment,
     BlogsData,
+    BlogView,
+    BlogLike,
 )
 from .serializers import (
     EducationEntrySerializer,
@@ -184,49 +186,170 @@ class BlogsDataView(generics.RetrieveAPIView):
 
 class BlogIncrementViewAPIView(APIView):
     """
-    Increment view count for a blog post.
+    Increment view count for a blog post using device fingerprint.
     POST /api/blog-posts/<slug>/increment-view/
+
+    Request body:
+    {
+        "fingerprint": "fp_abc123...",
+        "session_id": "session_xyz..."
+    }
+
+    Only counts unique views per fingerprint (prevents duplicate views from same device).
     """
     def post(self, request, slug):
         blog = get_object_or_404(Blog, slug=slug, is_published=True)
-        blog.views += 1
-        blog.save(update_fields=['views'])
+
+        # Get fingerprint from request
+        fingerprint = request.data.get('fingerprint', '')
+        session_id = request.data.get('session_id', '')
+
+        if not fingerprint:
+            return Response({
+                'success': False,
+                'message': 'Fingerprint is required',
+                'views': blog.views
+            }, status=http_status.HTTP_400_BAD_REQUEST)
+
+        # Get client IP and user agent
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        # Check if this fingerprint has already viewed this blog
+        view_record, created = BlogView.objects.get_or_create(
+            blog=blog,
+            fingerprint=fingerprint,
+            defaults={
+                'session_id': session_id,
+                'ip_address': ip_address,
+                'user_agent': user_agent,
+            }
+        )
+
+        if created:
+            # This is a new unique view, increment the counter
+            blog.views += 1
+            blog.save(update_fields=['views'])
+            message = 'View count incremented'
+        else:
+            # This fingerprint has already viewed this blog
+            message = 'View already counted for this device'
+
         return Response({
             'success': True,
-            'message': 'View count incremented',
-            'views': blog.views
+            'message': message,
+            'views': blog.views,
+            'is_new_view': created
         }, status=http_status.HTTP_200_OK)
+
+    @staticmethod
+    def get_client_ip(request):
+        """Extract client IP address from request."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
 
 class BlogLikeToggleAPIView(APIView):
     """
-    Toggle like for a blog post.
+    Toggle like for a blog post using device fingerprint.
     POST /api/blog-posts/<slug>/toggle-like/
 
-    Request body: { "action": "like" } or { "action": "unlike" }
+    Request body:
+    {
+        "action": "like" or "unlike",
+        "fingerprint": "fp_abc123..."
+    }
+
+    Only allows one like per fingerprint (prevents duplicate likes from same device).
     """
     def post(self, request, slug):
         blog = get_object_or_404(Blog, slug=slug, is_published=True)
+
+        # Get fingerprint from request
+        fingerprint = request.data.get('fingerprint', '')
         action = request.data.get('action', 'like')
 
-        if action == 'like':
-            blog.likes += 1
-            message = 'Blog liked'
-        elif action == 'unlike':
-            blog.likes = max(0, blog.likes - 1)  # Prevent negative likes
-            message = 'Blog unliked'
-        else:
+        if not fingerprint:
+            return Response({
+                'success': False,
+                'message': 'Fingerprint is required',
+                'likes': blog.likes
+            }, status=http_status.HTTP_400_BAD_REQUEST)
+
+        if action not in ['like', 'unlike']:
             return Response({
                 'success': False,
                 'message': 'Invalid action. Use "like" or "unlike"'
             }, status=http_status.HTTP_400_BAD_REQUEST)
 
+        # Get client IP and user agent
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        # Get or create like record for this fingerprint
+        like_record, created = BlogLike.objects.get_or_create(
+            blog=blog,
+            fingerprint=fingerprint,
+            defaults={
+                'ip_address': ip_address,
+                'user_agent': user_agent,
+                'is_active': (action == 'like')
+            }
+        )
+
+        if action == 'like':
+            if created:
+                # New like
+                blog.likes += 1
+                message = 'Blog liked'
+                is_liked = True
+            elif not like_record.is_active:
+                # Re-liking after unliking
+                like_record.is_active = True
+                like_record.save(update_fields=['is_active'])
+                blog.likes += 1
+                message = 'Blog liked'
+                is_liked = True
+            else:
+                # Already liked
+                message = 'Already liked by this device'
+                is_liked = True
+
+        else:  # action == 'unlike'
+            if like_record.is_active:
+                # Unliking
+                like_record.is_active = False
+                like_record.save(update_fields=['is_active'])
+                blog.likes = max(0, blog.likes - 1)  # Prevent negative likes
+                message = 'Blog unliked'
+                is_liked = False
+            else:
+                # Already unliked
+                message = 'Not currently liked'
+                is_liked = False
+
         blog.save(update_fields=['likes'])
+
         return Response({
             'success': True,
             'message': message,
-            'likes': blog.likes
+            'likes': blog.likes,
+            'is_liked': is_liked
         }, status=http_status.HTTP_200_OK)
+
+    @staticmethod
+    def get_client_ip(request):
+        """Extract client IP address from request."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
 
 class BlogCommentCreateAPIView(generics.CreateAPIView):

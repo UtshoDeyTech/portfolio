@@ -211,3 +211,58 @@ class BlogsData(models.Model):
 
     def __str__(self):
         return "blogsData"
+
+
+class BlogView(models.Model):
+    """
+    Track unique blog views by device fingerprint and session.
+    Prevents counting multiple views from the same device/session.
+    """
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='view_records')
+    fingerprint = models.CharField(max_length=255, db_index=True, help_text="Device fingerprint")
+    session_id = models.CharField(max_length=255, blank=True, help_text="Browser session ID")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    viewed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-viewed_at']
+        verbose_name = "Blog View"
+        verbose_name_plural = "Blog Views"
+        # Ensure one view per fingerprint per blog
+        unique_together = ['blog', 'fingerprint']
+        indexes = [
+            models.Index(fields=['blog', 'fingerprint']),
+            models.Index(fields=['viewed_at']),
+        ]
+
+    def __str__(self):
+        return f"View on {self.blog.title} - {self.fingerprint[:20]}"
+
+
+class BlogLike(models.Model):
+    """
+    Track unique blog likes by device fingerprint.
+    Prevents the same device from liking multiple times.
+    """
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='like_records')
+    fingerprint = models.CharField(max_length=255, db_index=True, help_text="Device fingerprint")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    liked_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    is_active = models.BooleanField(default=True, help_text="False if user unliked")
+
+    class Meta:
+        ordering = ['-liked_at']
+        verbose_name = "Blog Like"
+        verbose_name_plural = "Blog Likes"
+        # Ensure one like record per fingerprint per blog
+        unique_together = ['blog', 'fingerprint']
+        indexes = [
+            models.Index(fields=['blog', 'fingerprint', 'is_active']),
+            models.Index(fields=['liked_at']),
+        ]
+
+    def __str__(self):
+        status = "Liked" if self.is_active else "Unliked"
+        return f"{status} {self.blog.title} - {self.fingerprint[:20]}"

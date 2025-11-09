@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchWithCsrf } from '@/utils/csrf';
 import { getApiUrl } from '@/utils/api-config';
+import { getUserIdentifier } from '@/utils/fingerprint';
 
 interface BlogInteractionsProps {
   slug: string;
@@ -13,13 +14,31 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
   const [likes, setLikes] = useState(initialLikes);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [fingerprint, setFingerprint] = useState('');
+  const [sessionId, setSessionId] = useState('');
+
+  // Get fingerprint on mount
+  useEffect(() => {
+    const identifier = getUserIdentifier();
+    setFingerprint(identifier.fingerprint);
+    setSessionId(identifier.sessionId);
+  }, []);
 
   // Increment view count on component mount
   useEffect(() => {
+    if (!fingerprint) return; // Wait for fingerprint to be ready
+
     const incrementView = async () => {
       try {
         const response = await fetch(`${getApiUrl()}/api/blog-posts/${slug}/increment-view/`, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fingerprint,
+            session_id: sessionId,
+          }),
         });
 
         if (response.ok) {
@@ -36,11 +55,11 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
     // Check if user has already liked this post (from localStorage)
     const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
     setIsLiked(likedPosts.includes(slug));
-  }, [slug]);
+  }, [slug, fingerprint, sessionId]);
 
   // Handle like/unlike
   const handleToggleLike = async () => {
-    if (isLiking) return; // Prevent multiple clicks
+    if (isLiking || !fingerprint) return; // Prevent multiple clicks and wait for fingerprint
 
     setIsLiking(true);
     const action = isLiked ? 'unlike' : 'like';
@@ -51,23 +70,28 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({
+          action,
+          fingerprint,
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         setLikes(data.likes);
-        setIsLiked(!isLiked);
+        setIsLiked(data.is_liked);
 
-        // Update localStorage
+        // Update localStorage for consistency
         const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
-        if (isLiked) {
+        if (data.is_liked) {
+          // Add to liked posts
+          if (!likedPosts.includes(slug)) {
+            localStorage.setItem('likedPosts', JSON.stringify([...likedPosts, slug]));
+          }
+        } else {
           // Remove from liked posts
           const updated = likedPosts.filter((s: string) => s !== slug);
           localStorage.setItem('likedPosts', JSON.stringify(updated));
-        } else {
-          // Add to liked posts
-          localStorage.setItem('likedPosts', JSON.stringify([...likedPosts, slug]));
         }
       }
     } catch (error) {

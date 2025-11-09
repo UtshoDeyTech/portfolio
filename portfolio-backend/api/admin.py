@@ -10,6 +10,8 @@ from .models import (
     Blog,
     BlogComment,
     BlogsData,
+    BlogView,
+    BlogLike,
 )
 
 
@@ -233,3 +235,80 @@ class BlogsDataAdmin(admin.ModelAdmin):
             return not BlogsData.objects.exists()
         except (OperationalError, ProgrammingError):
             return True  # Allow if table doesn't exist yet
+
+
+@admin.register(BlogView)
+class BlogViewAdmin(admin.ModelAdmin):
+    list_display = (
+        'blog',
+        'fingerprint_preview',
+        'session_id_preview',
+        'ip_address',
+        'viewed_at'
+    )
+
+    list_filter = (
+        'viewed_at',
+        'blog'
+    )
+
+    search_fields = (
+        'fingerprint',
+        'session_id',
+        'ip_address',
+        'blog__title'
+    )
+
+    readonly_fields = ('blog', 'fingerprint', 'session_id', 'ip_address', 'user_agent', 'viewed_at')
+
+    ordering = ('-viewed_at',)
+
+    def has_add_permission(self, request):
+        return False  # Views are created automatically
+
+    def fingerprint_preview(self, obj):
+        """Show preview of fingerprint."""
+        return obj.fingerprint[:30] + '...' if len(obj.fingerprint) > 30 else obj.fingerprint
+    fingerprint_preview.short_description = "Fingerprint"
+
+    def session_id_preview(self, obj):
+        """Show preview of session ID."""
+        if not obj.session_id:
+            return '-'
+        return obj.session_id[:30] + '...' if len(obj.session_id) > 30 else obj.session_id
+    session_id_preview.short_description = "Session ID"
+
+
+@admin.register(BlogLike)
+class BlogLikeAdmin(admin.ModelAdmin):
+    list_display = (
+        'blog',
+        'fingerprint_preview',
+        'ip_address',
+        'is_active',
+        'liked_at'
+    )
+
+    list_filter = (
+        'is_active',
+        'liked_at',
+        'blog'
+    )
+
+    search_fields = (
+        'fingerprint',
+        'ip_address',
+        'blog__title'
+    )
+
+    readonly_fields = ('blog', 'fingerprint', 'ip_address', 'user_agent', 'liked_at')
+
+    ordering = ('-liked_at',)
+
+    def has_add_permission(self, request):
+        return False  # Likes are created automatically
+
+    def fingerprint_preview(self, obj):
+        """Show preview of fingerprint."""
+        return obj.fingerprint[:30] + '...' if len(obj.fingerprint) > 30 else obj.fingerprint
+    fingerprint_preview.short_description = "Fingerprint"
