@@ -2,6 +2,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from rest_framework import status as http_status
 
@@ -15,6 +16,7 @@ from .models import (
     Blog,
     BlogComment,
     BlogsData,
+    BlogSettings,
     BlogView,
     BlogLike,
 )
@@ -184,6 +186,19 @@ class BlogsDataView(generics.RetrieveAPIView):
         return self.queryset.first()
 
 
+class BlogSettingsView(APIView):
+    """
+    GET /api/blog-settings/
+    Returns blog configuration settings (duration update interval, etc.).
+    """
+    def get(self, request):
+        settings = BlogSettings.get_settings()
+        return Response({
+            'duration_update_interval': settings.duration_update_interval,
+            'inactivity_threshold': settings.inactivity_threshold,
+        }, status=http_status.HTTP_200_OK)
+
+
 class BlogIncrementViewAPIView(APIView):
     """
     Increment view count for a blog post using device fingerprint.
@@ -195,7 +210,8 @@ class BlogIncrementViewAPIView(APIView):
         "session_id": "session_xyz..."
     }
 
-    Only counts unique views per fingerprint (prevents duplicate views from same device).
+    Counts one view per device per day (resets daily for better analytics).
+    Same device viewing on different days will increment the view count.
     """
     def post(self, request, slug):
         blog = get_object_or_404(Blog, slug=slug, is_published=True)
@@ -215,10 +231,14 @@ class BlogIncrementViewAPIView(APIView):
         ip_address = self.get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Check if this fingerprint has already viewed this blog
+        # Get today's date
+        today = timezone.now().date()
+
+        # Check if this fingerprint has already viewed this blog TODAY
         view_record, created = BlogView.objects.get_or_create(
             blog=blog,
             fingerprint=fingerprint,
+            viewed_date=today,
             defaults={
                 'session_id': session_id,
                 'ip_address': ip_address,
@@ -227,13 +247,13 @@ class BlogIncrementViewAPIView(APIView):
         )
 
         if created:
-            # This is a new unique view, increment the counter
+            # This is a new view for today, increment the counter
             blog.views += 1
             blog.save(update_fields=['views'])
             message = 'View count incremented'
         else:
-            # This fingerprint has already viewed this blog
-            message = 'View already counted for this device'
+            # This fingerprint has already viewed this blog today
+            message = 'View already counted for this device today'
 
         return Response({
             'success': True,
@@ -241,6 +261,80 @@ class BlogIncrementViewAPIView(APIView):
             'views': blog.views,
             'is_new_view': created
         }, status=http_status.HTTP_200_OK)
+
+    @staticmethod
+    def get_client_ip(request):
+        """Extract client IP address from request."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+
+
+class BlogUpdateDurationAPIView(APIView):
+    """
+    Update time spent on a blog post.
+    POST /api/blog-posts/<slug>/update-duration/
+
+    Request body:
+    {
+        "fingerprint": "fp_abc123...",
+        "duration": 45  // seconds spent on this visit
+    }
+
+    Accumulates total time spent and updates last_seen timestamp.
+    """
+    def post(self, request, slug):
+        blog = get_object_or_404(Blog, slug=slug, is_published=True)
+
+        # Get fingerprint and duration from request
+        fingerprint = request.data.get('fingerprint', '')
+        duration = request.data.get('duration', 0)
+
+        if not fingerprint:
+            return Response({
+                'success': False,
+                'message': 'Fingerprint is required'
+            }, status=http_status.HTTP_400_BAD_REQUEST)
+
+        try:
+            duration = int(duration)
+            if duration < 0:
+                duration = 0
+        except (ValueError, TypeError):
+            duration = 0
+
+        # Get today's date
+        today = timezone.now().date()
+
+        # Try to get today's view record for this fingerprint
+        try:
+            view_record = BlogView.objects.get(
+                blog=blog,
+                fingerprint=fingerprint,
+                viewed_date=today
+            )
+
+            # Update duration and last_seen (last_seen auto-updates with save())
+            view_record.duration_seconds += duration
+            view_record.save()
+
+            return Response({
+                'success': True,
+                'message': 'Duration updated',
+                'total_duration': view_record.duration_seconds,
+                'total_duration_display': view_record.get_duration_display(),
+                'last_seen': view_record.last_seen.isoformat()
+            }, status=http_status.HTTP_200_OK)
+
+        except BlogView.DoesNotExist:
+            # No view record for today, can't update duration
+            return Response({
+                'success': False,
+                'message': 'No view record found for today'
+            }, status=http_status.HTTP_404_NOT_FOUND)
 
     @staticmethod
     def get_client_ip(request):

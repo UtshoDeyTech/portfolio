@@ -10,6 +10,7 @@ from .models import (
     Blog,
     BlogComment,
     BlogsData,
+    BlogSettings,
     BlogView,
     BlogLike,
 )
@@ -237,18 +238,50 @@ class BlogsDataAdmin(admin.ModelAdmin):
             return True  # Allow if table doesn't exist yet
 
 
+@admin.register(BlogSettings)
+class BlogSettingsAdmin(admin.ModelAdmin):
+    list_display = ('duration_update_interval', 'inactivity_threshold', 'updated_at')
+
+    fieldsets = (
+        ('Time Tracking Settings', {
+            'fields': ('duration_update_interval', 'inactivity_threshold'),
+            'description': 'Configure how blog post time tracking behaves.'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    readonly_fields = ('created_at', 'updated_at')
+
+    def has_add_permission(self, request):
+        # Only allow adding if no settings exist
+        try:
+            return not BlogSettings.objects.exists()
+        except (OperationalError, ProgrammingError):
+            return True
+
+    def has_delete_permission(self, request, obj=None):
+        # Never allow deleting the settings
+        return False
+
+
 @admin.register(BlogView)
 class BlogViewAdmin(admin.ModelAdmin):
     list_display = (
         'blog',
         'fingerprint_preview',
-        'session_id_preview',
-        'ip_address',
-        'viewed_at'
+        'viewed_date',
+        'duration_display',
+        'last_seen',
+        'ip_address'
     )
 
     list_filter = (
+        'viewed_date',
         'viewed_at',
+        'last_seen',
         'blog'
     )
 
@@ -259,9 +292,14 @@ class BlogViewAdmin(admin.ModelAdmin):
         'blog__title'
     )
 
-    readonly_fields = ('blog', 'fingerprint', 'session_id', 'ip_address', 'user_agent', 'viewed_at')
+    readonly_fields = ('blog', 'fingerprint', 'session_id', 'ip_address', 'user_agent', 'viewed_at', 'viewed_date', 'last_seen', 'duration_seconds', 'duration_display')
 
-    ordering = ('-viewed_at',)
+    ordering = ('-viewed_date', '-viewed_at')
+
+    def duration_display(self, obj):
+        """Show human-readable duration."""
+        return obj.get_duration_display()
+    duration_display.short_description = "Time Spent"
 
     def has_add_permission(self, request):
         return False  # Views are created automatically

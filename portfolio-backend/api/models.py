@@ -213,10 +213,45 @@ class BlogsData(models.Model):
         return "blogsData"
 
 
+class BlogSettings(models.Model):
+    """
+    Global blog settings (singleton model).
+    """
+    duration_update_interval = models.IntegerField(
+        default=300,
+        help_text="How often to update duration tracking (in seconds). Default: 300 (5 minutes)"
+    )
+    inactivity_threshold = models.IntegerField(
+        default=120,
+        help_text="How long before considering user inactive (in seconds). Default: 120 (2 minutes)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Blog Settings"
+        verbose_name_plural = "Blog Settings"
+
+    def __str__(self):
+        return "Blog Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the settings instance."""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class BlogView(models.Model):
     """
-    Track unique blog views by device fingerprint and session.
-    Prevents counting multiple views from the same device/session.
+    Track blog views by device fingerprint.
+    Counts one view per device per day (resets daily for better analytics).
+    Also tracks time spent and last seen time for engagement analytics.
     """
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='view_records')
     fingerprint = models.CharField(max_length=255, db_index=True, help_text="Device fingerprint")
@@ -224,20 +259,32 @@ class BlogView(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     viewed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    viewed_date = models.DateField(auto_now_add=True, db_index=True, help_text="Date of view (for daily tracking)")
+    last_seen = models.DateTimeField(auto_now=True, help_text="Last time user was on this blog")
+    duration_seconds = models.IntegerField(default=0, help_text="Total time spent on this blog (in seconds)")
 
     class Meta:
         ordering = ['-viewed_at']
         verbose_name = "Blog View"
         verbose_name_plural = "Blog Views"
-        # Ensure one view per fingerprint per blog
-        unique_together = ['blog', 'fingerprint']
+        # Ensure one view per fingerprint per blog per day
+        unique_together = ['blog', 'fingerprint', 'viewed_date']
         indexes = [
-            models.Index(fields=['blog', 'fingerprint']),
+            models.Index(fields=['blog', 'fingerprint', 'viewed_date']),
             models.Index(fields=['viewed_at']),
+            models.Index(fields=['last_seen']),
         ]
 
     def __str__(self):
-        return f"View on {self.blog.title} - {self.fingerprint[:20]}"
+        return f"View on {self.blog.title} - {self.fingerprint[:20]} on {self.viewed_date}"
+
+    def get_duration_display(self):
+        """Return human-readable duration."""
+        minutes = self.duration_seconds // 60
+        seconds = self.duration_seconds % 60
+        if minutes > 0:
+            return f"{minutes}m {seconds}s"
+        return f"{seconds}s"
 
 
 class BlogLike(models.Model):

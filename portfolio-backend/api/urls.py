@@ -26,6 +26,7 @@ urlpatterns = [
     # Home and Blogs (singletons)
     path('home/', views.HomeDataView.as_view(), name='home-data'),
     path('blogs/', views.BlogsDataView.as_view(), name='blogs-data'),
+    path('blog-settings/', views.BlogSettingsView.as_view(), name='blog-settings'),
 
     # Blog Posts
     path('blog-posts/', views.BlogListView.as_view(), name='blog-list'),
@@ -36,6 +37,7 @@ urlpatterns = [
 
     # Blog Interactions
     path('blog-posts/<slug:slug>/increment-view/', views.BlogIncrementViewAPIView.as_view(), name='blog-increment-view'),
+    path('blog-posts/<slug:slug>/update-duration/', views.BlogUpdateDurationAPIView.as_view(), name='blog-update-duration'),
     path('blog-posts/<slug:slug>/toggle-like/', views.BlogLikeToggleAPIView.as_view(), name='blog-toggle-like'),
     path('blog-posts/<slug:slug>/comments/', views.BlogCommentCreateAPIView.as_view(), name='blog-comment-create'),
     path('blog-posts/<slug:slug>/comments/list/', views.BlogCommentsListAPIView.as_view(), name='blog-comments-list'),

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchWithCsrf } from '@/utils/csrf';
 import { getApiUrl } from '@/utils/api-config';
 import { getUserIdentifier } from '@/utils/fingerprint';
+import { initializeTimeTracking, TimeTracker } from '@/utils/time-tracker';
 
 interface BlogInteractionsProps {
   slug: string;
@@ -16,6 +17,7 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
   const [isLiking, setIsLiking] = useState(false);
   const [fingerprint, setFingerprint] = useState('');
   const [sessionId, setSessionId] = useState('');
+  const [timeTracker, setTimeTracker] = useState<TimeTracker | null>(null);
 
   // Get fingerprint on mount
   useEffect(() => {
@@ -23,6 +25,25 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
     setFingerprint(identifier.fingerprint);
     setSessionId(identifier.sessionId);
   }, []);
+
+  // Initialize time tracking
+  useEffect(() => {
+    let tracker: TimeTracker | null = null;
+
+    const setupTimeTracking = async () => {
+      tracker = await initializeTimeTracking(slug);
+      setTimeTracker(tracker);
+    };
+
+    setupTimeTracking();
+
+    // Cleanup on unmount
+    return () => {
+      if (tracker) {
+        tracker.stop();
+      }
+    };
+  }, [slug]);
 
   // Increment view count on component mount
   useEffect(() => {
