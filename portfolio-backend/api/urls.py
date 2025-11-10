@@ -1,8 +1,13 @@
 from django.urls import path
 from . import views
+from . import admin_views
 
 urlpatterns = [
     path('', views.IndexView.as_view(), name='api-index'),
+
+    # Admin Import/Export Views (simple buttons)
+    path('admin/portfolio-export/', admin_views.export_portfolio_view, name='admin-portfolio-export'),
+    path('admin/portfolio-import/', admin_views.import_portfolio_view, name='admin-portfolio-import'),
 
     # Education
     path('education/', views.EducationListView.as_view(), name='education-list'),

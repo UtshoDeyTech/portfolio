@@ -60,6 +60,8 @@ class ResearchIconAdmin(admin.ModelAdmin):
 
 @admin.register(HomeData)
 class HomeDataAdmin(admin.ModelAdmin):
+    change_form_template = 'admin/homedata_change_form.html'
+
     fieldsets = (
         ('Hero Section', {
             'fields': (
