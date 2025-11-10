@@ -45,9 +45,80 @@ class ResearchIconSerializer(serializers.ModelSerializer):
 
 
 class HomeDataSerializer(serializers.ModelSerializer):
+    """
+    Serializer for HomeData model.
+    Formats the individual fields into the expected frontend structure.
+    """
     class Meta:
         model = HomeData
         fields = '__all__'
+
+    def to_representation(self, instance):
+        """
+        Transform the flat model structure into nested JSON for frontend.
+        """
+        return {
+            'data': {
+                'hero': {
+                    'name': instance.hero_name,
+                    'tagline': instance.hero_tagline,
+                    'bio': instance.hero_bio,
+                    'profile_image': instance.hero_profile_image,
+                    'resume_url': instance.hero_resume_url or None,
+                    'cta_buttons': {
+                        'primary': {
+                            'text': instance.hero_cta_primary_text,
+                            'url': instance.hero_cta_primary_url,
+                        } if instance.hero_cta_primary_text else None,
+                        'secondary': {
+                            'text': instance.hero_cta_secondary_text,
+                            'url': instance.hero_cta_secondary_url,
+                        } if instance.hero_cta_secondary_text else None,
+                    }
+                },
+                'about': {
+                    'title': instance.about_title,
+                    'paragraphs': instance.about_paragraphs,
+                    'highlights': instance.about_highlights,
+                },
+                'stats': {
+                    'years_of_experience': instance.stats_years_of_experience or None,
+                    'projects_completed': instance.stats_projects_completed,
+                    'publications': instance.stats_publications,
+                    'technologies_used': instance.stats_technologies_used,
+                },
+                'skills': {
+                    'title': instance.skills_title,
+                    'categories': instance.skills_categories,
+                },
+                'social_links': {
+                    'github': instance.social_github or None,
+                    'linkedin': instance.social_linkedin or None,
+                    'twitter': instance.social_twitter or None,
+                    'email': instance.social_email or None,
+                    'scholar': instance.social_scholar or None,
+                },
+                'cta': {
+                    'title': instance.cta_title or None,
+                    'paragraph': instance.cta_paragraph or None,
+                    'primary': {
+                        'text': instance.cta_primary_text,
+                        'url': instance.cta_primary_url or f"mailto:{instance.social_email}",
+                    } if instance.cta_primary_text else None,
+                    'secondary': {
+                        'text': instance.cta_secondary_text,
+                        'url': instance.cta_secondary_url,
+                    } if instance.cta_secondary_text else None,
+                },
+                'featured_sections': {
+                    'show_experience': instance.show_experience,
+                    'show_education': instance.show_education,
+                    'show_projects': instance.show_projects,
+                    'show_research': instance.show_research,
+                    'show_blog': instance.show_blog,
+                }
+            }
+        }
 
 
 class BlogSerializer(serializers.ModelSerializer):

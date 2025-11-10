@@ -125,11 +125,81 @@ class ResearchIcon(models.Model):
 
 
 class HomeData(models.Model):
-    # Store whole homeData as JSON to avoid over-modeling
-    data = models.JSONField()
+    """
+    Singleton model for home page data.
+    Better structured with individual fields instead of one large JSON blob.
+    """
+    # Hero Section
+    hero_name = models.CharField(max_length=255, default="Your Name")
+    hero_tagline = models.CharField(max_length=500, default="Your Tagline")
+    hero_bio = models.TextField(default="Your bio")
+    hero_profile_image = models.CharField(max_length=500, blank=True, help_text="URL to profile image (can use CDN URL or relative path)")
+    hero_resume_url = models.CharField(max_length=500, blank=True, help_text="URL to resume PDF (can be relative like /resume.pdf)")
+
+    # Hero CTA Buttons
+    hero_cta_primary_text = models.CharField(max_length=100, blank=True, default="View My Work")
+    hero_cta_primary_url = models.CharField(max_length=500, blank=True, default="/project")
+    hero_cta_secondary_text = models.CharField(max_length=100, blank=True, default="Contact Me")
+    hero_cta_secondary_url = models.CharField(max_length=500, blank=True, default="mailto:your@email.com")
+
+    # About Section
+    about_title = models.CharField(max_length=255, default="About Me")
+    about_paragraphs = models.JSONField(default=list, help_text="List of paragraphs for about section")
+    about_highlights = models.JSONField(default=list, help_text="List of key highlights")
+
+    # Stats Section
+    stats_years_of_experience = models.CharField(max_length=20, blank=True, help_text="e.g., '2+', '5'")
+    stats_projects_completed = models.IntegerField(null=True, blank=True)
+    stats_publications = models.IntegerField(null=True, blank=True)
+    stats_technologies_used = models.IntegerField(null=True, blank=True)
+
+    # Skills Section
+    skills_title = models.CharField(max_length=255, default="Technical Skills")
+    skills_categories = models.JSONField(default=list, help_text="List of skill categories with name, icon, and skills list")
+
+    # Social Links
+    social_github = models.URLField(blank=True)
+    social_linkedin = models.URLField(blank=True)
+    social_twitter = models.URLField(blank=True)
+    social_email = models.EmailField(blank=True)
+    social_scholar = models.URLField(blank=True)
+
+    # CTA Section
+    cta_title = models.CharField(max_length=255, blank=True, default="Let's Work Together")
+    cta_paragraph = models.TextField(blank=True, default="I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.")
+    cta_primary_text = models.CharField(max_length=100, blank=True, default="Get In Touch")
+    cta_primary_url = models.CharField(max_length=500, blank=True)
+    cta_secondary_text = models.CharField(max_length=100, blank=True, default="View Portfolio")
+    cta_secondary_url = models.CharField(max_length=500, blank=True, default="/project")
+
+    # Featured Sections (toggles)
+    show_experience = models.BooleanField(default=True, help_text="Show experience section on home page")
+    show_education = models.BooleanField(default=True, help_text="Show education section on home page")
+    show_projects = models.BooleanField(default=True, help_text="Show projects section on home page")
+    show_research = models.BooleanField(default=True, help_text="Show research section on home page")
+    show_blog = models.BooleanField(default=True, help_text="Show blog section on home page")
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Home Page Data"
+        verbose_name_plural = "Home Page Data"
 
     def __str__(self):
-        return "homeData"
+        return "Home Page Data"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_home_data(cls):
+        """Get or create the home data instance."""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
 
 
 class Blog(models.Model):

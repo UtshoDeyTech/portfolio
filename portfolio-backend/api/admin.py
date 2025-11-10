@@ -60,11 +60,98 @@ class ResearchIconAdmin(admin.ModelAdmin):
 
 @admin.register(HomeData)
 class HomeDataAdmin(admin.ModelAdmin):
+    fieldsets = (
+        ('Hero Section', {
+            'fields': (
+                'hero_name',
+                'hero_tagline',
+                'hero_bio',
+                'hero_profile_image',
+                'hero_resume_url',
+            ),
+            'description': 'Main hero section displayed at the top of the home page.'
+        }),
+        ('Hero Call-to-Action Buttons', {
+            'fields': (
+                ('hero_cta_primary_text', 'hero_cta_primary_url'),
+                ('hero_cta_secondary_text', 'hero_cta_secondary_url'),
+            ),
+            'description': 'Primary and secondary CTA buttons in the hero section.'
+        }),
+        ('About Section', {
+            'fields': (
+                'about_title',
+                'about_paragraphs',
+                'about_highlights',
+            ),
+            'description': 'About section content. Use JSON format for paragraphs and highlights lists.'
+        }),
+        ('Stats Section', {
+            'fields': (
+                'stats_years_of_experience',
+                'stats_projects_completed',
+                'stats_publications',
+                'stats_technologies_used',
+            ),
+            'description': 'Statistics displayed on the home page. Leave blank to hide a stat.'
+        }),
+        ('Skills Section', {
+            'fields': (
+                'skills_title',
+                'skills_categories',
+            ),
+            'description': 'Skills section. skills_categories should be a JSON list with format: [{"name": "Category", "icon": "🔧", "skills": ["Skill1", "Skill2"]}]'
+        }),
+        ('Social Links', {
+            'fields': (
+                'social_email',
+                'social_github',
+                'social_linkedin',
+                'social_twitter',
+                'social_scholar',
+            ),
+            'description': 'Social media and contact links.'
+        }),
+        ('Bottom Call-to-Action Section', {
+            'fields': (
+                'cta_title',
+                'cta_paragraph',
+                ('cta_primary_text', 'cta_primary_url'),
+                ('cta_secondary_text', 'cta_secondary_url'),
+            ),
+            'description': 'Final CTA section at the bottom of the home page.'
+        }),
+        ('Featured Sections Toggle', {
+            'fields': (
+                'show_experience',
+                'show_education',
+                'show_projects',
+                'show_research',
+                'show_blog',
+            ),
+            'description': 'Toggle which sections appear on the home page.'
+        }),
+        ('Timestamps', {
+            'fields': (
+                'created_at',
+                'updated_at',
+            ),
+            'classes': ('collapse',),
+        })
+    )
+
+    readonly_fields = ('created_at', 'updated_at')
+
     def has_add_permission(self, request):
+        # Only allow adding if no record exists (singleton)
         try:
             return not HomeData.objects.exists()
         except (OperationalError, ProgrammingError):
             return True  # Allow if table doesn't exist yet
+
+    def has_delete_permission(self, request, obj=None):
+        # Never allow deleting the home data
+        return False
 
 
 @admin.register(Blog)
