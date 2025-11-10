@@ -502,3 +502,61 @@ class BlogCommentsListAPIView(generics.ListAPIView):
         blog = get_object_or_404(Blog, slug=slug, is_published=True)
         # Only return approved comments
         return BlogComment.objects.filter(blog=blog, is_approved=True).order_by('-created_at')
+
+
+class BlogViewStatsAPIView(APIView):
+    """
+    Get user's view statistics for a specific blog post.
+    GET /api/blog-posts/<slug>/view-stats/?fingerprint=<fingerprint>
+
+    Returns:
+    {
+        "first_viewed_at": "2024-01-15T10:30:00Z",
+        "last_seen": "2024-01-15T11:45:00Z",
+        "total_duration": 450,
+        "total_duration_display": "7m 30s",
+        "viewed_date": "2024-01-15",
+        "has_viewed": true
+    }
+    """
+    def get(self, request, slug):
+        blog = get_object_or_404(Blog, slug=slug, is_published=True)
+
+        # Get fingerprint from query params
+        fingerprint = request.GET.get('fingerprint', '')
+
+        if not fingerprint:
+            return Response({
+                'success': False,
+                'message': 'Fingerprint is required',
+                'has_viewed': False
+            }, status=http_status.HTTP_400_BAD_REQUEST)
+
+        # Get today's date
+        today = timezone.now().date()
+
+        # Try to get today's view record for this fingerprint
+        try:
+            view_record = BlogView.objects.get(
+                blog=blog,
+                fingerprint=fingerprint,
+                viewed_date=today
+            )
+
+            return Response({
+                'success': True,
+                'has_viewed': True,
+                'first_viewed_at': view_record.viewed_at.isoformat(),
+                'last_seen': view_record.last_seen.isoformat(),
+                'total_duration': view_record.duration_seconds,
+                'total_duration_display': view_record.get_duration_display(),
+                'viewed_date': view_record.viewed_date.isoformat()
+            }, status=http_status.HTTP_200_OK)
+
+        except BlogView.DoesNotExist:
+            # No view record for today
+            return Response({
+                'success': True,
+                'has_viewed': False,
+                'message': 'No view record found for today'
+            }, status=http_status.HTTP_200_OK)
