@@ -3,6 +3,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.http import FileResponse, Http404
+import mimetypes
+import os
 
 from rest_framework import status as http_status
 
@@ -19,6 +22,7 @@ from .models import (
     BlogSettings,
     BlogView,
     BlogLike,
+    MediaFile,
 )
 from .serializers import (
     EducationEntrySerializer,
@@ -32,6 +36,8 @@ from .serializers import (
     BlogCommentSerializer,
     BlogCommentCreateSerializer,
     BlogsDataSerializer,
+    MediaFileSerializer,
+    MediaFileListSerializer,
 )
 
 
@@ -560,3 +566,114 @@ class BlogViewStatsAPIView(APIView):
                 'has_viewed': False,
                 'message': 'No view record found for today'
             }, status=http_status.HTTP_200_OK)
+
+
+class MediaFileListView(generics.ListAPIView):
+    """
+    List all media files.
+    GET /api/media-files/
+
+    Query parameters:
+    - file_type: Filter by file type (image, audio, video, document, archive, other)
+    """
+    serializer_class = MediaFileListSerializer
+
+    def get_queryset(self):
+        queryset = MediaFile.objects.filter(is_public=True)
+
+        # Filter by file type if provided
+        file_type = self.request.query_params.get('file_type', None)
+        if file_type:
+            queryset = queryset.filter(file_type=file_type)
+
+        return queryset.order_by('-uploaded_at')
+
+
+class MediaFileDetailView(generics.RetrieveAPIView):
+    """
+    Get details of a specific media file by slug or UUID.
+    GET /api/media-files/{slug_or_uuid}/
+    """
+    serializer_class = MediaFileSerializer
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        return MediaFile.objects.filter(is_public=True)
+
+    def get_object(self):
+        """
+        Allow lookup by either slug or UUID.
+        """
+        lookup_value = self.kwargs.get(self.lookup_field)
+
+        try:
+            # Try to get by slug first
+            return self.get_queryset().get(slug=lookup_value)
+        except MediaFile.DoesNotExist:
+            # Try to get by UUID
+            try:
+                return self.get_queryset().get(uuid=lookup_value)
+            except (MediaFile.DoesNotExist, ValueError):
+                raise Http404("Media file not found")
+
+
+class ServeMediaFileView(APIView):
+    """
+    Serve media files through a secure endpoint.
+    GET /cdn/{slug}
+
+    This endpoint serves files without exposing the direct file path.
+    Files are served with appropriate content-type headers.
+    """
+    def get(self, request, slug):
+        # Get media file by slug or UUID
+        try:
+            media_file = MediaFile.objects.get(slug=slug)
+        except MediaFile.DoesNotExist:
+            # Try by UUID
+            try:
+                media_file = MediaFile.objects.get(uuid=slug)
+            except (MediaFile.DoesNotExist, ValueError):
+                raise Http404("File not found")
+
+        # Check if file is public (optional: add authentication check here)
+        if not media_file.is_public:
+            # TODO: Add authentication check
+            return Response({
+                'success': False,
+                'message': 'File is not public'
+            }, status=http_status.HTTP_403_FORBIDDEN)
+
+        # Check if file exists
+        if not media_file.file:
+            raise Http404("File not found")
+
+        try:
+            # Open the file
+            file_handle = media_file.file.open('rb')
+
+            # Determine MIME type
+            mime_type = media_file.mime_type
+            if not mime_type:
+                # Guess MIME type from file extension
+                mime_type, _ = mimetypes.guess_type(media_file.file.path)
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+
+            # Create file response
+            response = FileResponse(file_handle, content_type=mime_type)
+
+            # Set content disposition (inline for display, attachment for download)
+            # Images, videos, audio should be inline; others should be attachment
+            if media_file.file_type in ['image', 'video', 'audio']:
+                response['Content-Disposition'] = f'inline; filename="{media_file.original_filename}"'
+            else:
+                response['Content-Disposition'] = f'attachment; filename="{media_file.original_filename}"'
+
+            # Set cache headers (optional - cache for 1 day)
+            response['Cache-Control'] = 'public, max-age=86400'
+
+            return response
+
+        except Exception as e:
+            raise Http404(f"Error serving file: {str(e)}")

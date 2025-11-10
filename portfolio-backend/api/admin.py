@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.utils import OperationalError, ProgrammingError
+from django.utils.html import format_html
 from .models import (
     EducationEntry,
     ExperienceEntry,
@@ -13,6 +14,7 @@ from .models import (
     BlogSettings,
     BlogView,
     BlogLike,
+    MediaFile,
 )
 
 
@@ -350,3 +352,185 @@ class BlogLikeAdmin(admin.ModelAdmin):
         """Show preview of fingerprint."""
         return obj.fingerprint[:30] + '...' if len(obj.fingerprint) > 30 else obj.fingerprint
     fingerprint_preview.short_description = "Fingerprint"
+
+
+@admin.register(MediaFile)
+class MediaFileAdmin(admin.ModelAdmin):
+    list_display = (
+        'title_or_filename',
+        'file_type',
+        'file_preview',
+        'slug',
+        'file_size_display_field',
+        'is_public',
+        'uploaded_at',
+        'copy_url_button'
+    )
+
+    list_filter = (
+        'file_type',
+        'is_public',
+        'uploaded_at',
+    )
+
+    search_fields = (
+        'slug',
+        'title',
+        'original_filename',
+        'uuid',
+    )
+
+    readonly_fields = (
+        'uuid',
+        'original_filename',
+        'file_size',
+        'file_size_display_field',
+        'uploaded_at',
+        'updated_at',
+        'file_preview_large',
+        'cdn_url_display',
+        'api_url_display'
+    )
+
+    ordering = ('-uploaded_at',)
+
+    fieldsets = (
+        ('File Upload', {
+            'fields': ('file', 'file_type'),
+            'description': 'Upload your file and select the appropriate type.'
+        }),
+        ('URL & Identification', {
+            'fields': ('slug', 'uuid', 'cdn_url_display', 'api_url_display'),
+            'description': 'Custom URL slug for accessing this file. Leave blank to auto-generate from UUID.'
+        }),
+        ('File Information', {
+            'fields': ('original_filename', 'file_size', 'file_size_display_field', 'mime_type'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('title', 'alt_text'),
+            'description': 'Optional metadata for better organization and accessibility.'
+        }),
+        ('Preview', {
+            'fields': ('file_preview_large',),
+            'description': 'Preview of the uploaded file (for images).'
+        }),
+        ('Access Control', {
+            'fields': ('is_public',),
+            'description': 'Control who can access this file.'
+        }),
+        ('Timestamps', {
+            'fields': ('uploaded_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    actions = ['make_public', 'make_private', 'copy_cdn_urls']
+
+    def title_or_filename(self, obj):
+        """Show title if available, otherwise show filename."""
+        return obj.title if obj.title else obj.original_filename
+    title_or_filename.short_description = "Title / Filename"
+
+    def file_size_display_field(self, obj):
+        """Show human-readable file size."""
+        return obj.get_file_size_display()
+    file_size_display_field.short_description = "File Size"
+
+    def file_preview(self, obj):
+        """Show thumbnail preview for images in list view."""
+        if obj.file_type == 'image' and obj.file:
+            return format_html(
+                '<img src="{}" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;" />',
+                obj.get_file_url()
+            )
+        elif obj.file_type == 'video':
+            return format_html('🎥')
+        elif obj.file_type == 'audio':
+            return format_html('🎵')
+        elif obj.file_type == 'document':
+            return format_html('📄')
+        elif obj.file_type == 'archive':
+            return format_html('📦')
+        else:
+            return format_html('📎')
+    file_preview.short_description = "Preview"
+
+    def file_preview_large(self, obj):
+        """Show larger preview in detail view."""
+        if obj.file_type == 'image' and obj.file:
+            return format_html(
+                '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;" />',
+                obj.get_file_url()
+            )
+        elif obj.file_type == 'video' and obj.file:
+            return format_html(
+                '<video controls style="max-width: 400px; border-radius: 8px;"><source src="{}"></video>',
+                obj.get_file_url()
+            )
+        elif obj.file_type == 'audio' and obj.file:
+            return format_html(
+                '<audio controls style="width: 400px;"><source src="{}"></audio>',
+                obj.get_file_url()
+            )
+        else:
+            return format_html('<p>Preview not available for this file type.</p>')
+    file_preview_large.short_description = "File Preview"
+
+    def cdn_url_display(self, obj):
+        """Display the CDN URL with a copy button."""
+        if obj.slug:
+            url = obj.get_file_url()
+            full_url = f"http://localhost:8000{url}"  # Update this with your domain
+            return format_html(
+                '<input type="text" value="{}" readonly style="width: 400px; padding: 4px;" '
+                'onclick="this.select(); document.execCommand(\'copy\'); alert(\'URL copied!\');" /> '
+                '<br><small>Click to copy</small>',
+                full_url
+            )
+        return '-'
+    cdn_url_display.short_description = "CDN URL"
+
+    def api_url_display(self, obj):
+        """Display the API URL."""
+        if obj.slug:
+            url = obj.get_api_url()
+            full_url = f"http://localhost:8000{url}"  # Update this with your domain
+            return format_html(
+                '<input type="text" value="{}" readonly style="width: 400px; padding: 4px;" '
+                'onclick="this.select(); document.execCommand(\'copy\'); alert(\'URL copied!\');" /> '
+                '<br><small>Click to copy</small>',
+                full_url
+            )
+        return '-'
+    api_url_display.short_description = "API URL"
+
+    def copy_url_button(self, obj):
+        """Show a copy URL button in list view."""
+        if obj.slug:
+            url = obj.get_file_url()
+            full_url = f"http://localhost:8000{url}"
+            return format_html(
+                '<button onclick="navigator.clipboard.writeText(\'{}\'); alert(\'URL copied!\');" '
+                'style="padding: 4px 8px; cursor: pointer;">Copy URL</button>',
+                full_url
+            )
+        return '-'
+    copy_url_button.short_description = "Actions"
+
+    def make_public(self, request, queryset):
+        updated = queryset.update(is_public=True)
+        self.message_user(request, f'{updated} file(s) made public.')
+    make_public.short_description = "Make selected files public"
+
+    def make_private(self, request, queryset):
+        updated = queryset.update(is_public=False)
+        self.message_user(request, f'{updated} file(s) made private.')
+    make_private.short_description = "Make selected files private"
+
+    def copy_cdn_urls(self, request, queryset):
+        """Copy all CDN URLs to clipboard (via message)."""
+        urls = [f"http://localhost:8000{obj.get_file_url()}" for obj in queryset]
+        urls_text = '\n'.join(urls)
+        self.message_user(request, f'CDN URLs:\n{urls_text}')
+    copy_cdn_urls.short_description = "Show CDN URLs for selected files"

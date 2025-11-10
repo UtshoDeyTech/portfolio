@@ -42,4 +42,11 @@ urlpatterns = [
     path('blog-posts/<slug:slug>/toggle-like/', views.BlogLikeToggleAPIView.as_view(), name='blog-toggle-like'),
     path('blog-posts/<slug:slug>/comments/', views.BlogCommentCreateAPIView.as_view(), name='blog-comment-create'),
     path('blog-posts/<slug:slug>/comments/list/', views.BlogCommentsListAPIView.as_view(), name='blog-comments-list'),
+
+    # Media Files (API endpoints for listing/details)
+    path('media-files/', views.MediaFileListView.as_view(), name='media-file-list'),
+    path('media-files/<slug:slug>/', views.MediaFileDetailView.as_view(), name='media-file-detail'),
+
+    # CDN endpoint for serving files (secure, not exposing direct file path)
+    path('cdn/<slug:slug>/', views.ServeMediaFileView.as_view(), name='serve-media-file'),
 ]

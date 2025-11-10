@@ -10,6 +10,7 @@ from .models import (
     Blog,
     BlogComment,
     BlogsData,
+    MediaFile,
 )
 
 
@@ -179,3 +180,85 @@ class BlogsDataSerializer(serializers.ModelSerializer):
 class SectionSerializer(serializers.Serializer):
     class Meta:
         fields = ()
+
+
+class MediaFileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for MediaFile model.
+    Provides file URL, size display, and metadata.
+    """
+    file_url = serializers.SerializerMethodField()
+    api_url = serializers.SerializerMethodField()
+    file_size_display = serializers.SerializerMethodField()
+    file_extension = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MediaFile
+        fields = [
+            'id',
+            'uuid',
+            'slug',
+            'file_type',
+            'original_filename',
+            'file_size',
+            'file_size_display',
+            'file_extension',
+            'mime_type',
+            'title',
+            'alt_text',
+            'file_url',
+            'api_url',
+            'is_public',
+            'uploaded_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'uuid', 'file_size', 'original_filename', 'uploaded_at', 'updated_at']
+
+    def get_file_url(self, obj):
+        """Returns the CDN URL for accessing this file."""
+        return obj.get_file_url()
+
+    def get_api_url(self, obj):
+        """Returns the API URL for accessing this file."""
+        return obj.get_api_url()
+
+    def get_file_size_display(self, obj):
+        """Returns human-readable file size."""
+        return obj.get_file_size_display()
+
+    def get_file_extension(self, obj):
+        """Returns the file extension."""
+        return obj.get_file_extension()
+
+
+class MediaFileListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for listing media files.
+    """
+    file_url = serializers.SerializerMethodField()
+    file_size_display = serializers.SerializerMethodField()
+    file_extension = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MediaFile
+        fields = [
+            'id',
+            'uuid',
+            'slug',
+            'file_type',
+            'original_filename',
+            'file_size_display',
+            'file_extension',
+            'title',
+            'file_url',
+            'uploaded_at',
+        ]
+
+    def get_file_url(self, obj):
+        return obj.get_file_url()
+
+    def get_file_size_display(self, obj):
+        return obj.get_file_size_display()
+
+    def get_file_extension(self, obj):
+        return obj.get_file_extension()

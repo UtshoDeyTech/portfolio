@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { homeData } from '@/data/home';
+import { fetchHomeData } from '@/data/home';
 import ProfilePictures from '@/assets/profile_pictures.jpg';
 import { getVisibleEducation, educationData } from '@/data/education';
 import { experienceData } from '@/data/experience';
@@ -9,6 +9,9 @@ import { researchData } from '@/data/research';
 import { getNewBlogs } from '@/data/blogs';
 import { getVisibleExperience } from '@/data/experience';
 import { getVisibleProjects } from '@/data/projects';
+
+// Fetch home data from backend API
+const homeData = await fetchHomeData();
 
 // Get latest/current data from each section
 // Load education entries from API

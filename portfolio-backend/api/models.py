@@ -1,4 +1,6 @@
 from django.db import models
+import uuid
+import os
 
 
 class EducationEntry(models.Model):
@@ -313,3 +315,110 @@ class BlogLike(models.Model):
     def __str__(self):
         status = "Liked" if self.is_active else "Unliked"
         return f"{status} {self.blog.title} - {self.fingerprint[:20]}"
+
+
+def secure_file_upload_path(instance, filename):
+    """
+    Generate a secure file path using UUID.
+    Stores files in: secure_storage/<file_type>/<uuid>.<ext>
+    """
+    ext = os.path.splitext(filename)[1].lower()  # Get file extension
+    unique_filename = f"{instance.uuid}{ext}"
+    return os.path.join('secure_storage', instance.file_type, unique_filename)
+
+
+class MediaFile(models.Model):
+    """
+    Model for storing media files (images, audio, video, documents, etc.)
+    Files are stored securely and served through a custom URL endpoint.
+    """
+    FILE_TYPE_CHOICES = [
+        ('image', 'Image'),
+        ('audio', 'Audio'),
+        ('video', 'Video'),
+        ('document', 'Document'),
+        ('archive', 'Archive'),
+        ('other', 'Other'),
+    ]
+
+    # Unique identifier and slug
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    slug = models.SlugField(max_length=255, unique=True, db_index=True, help_text="Custom URL slug for accessing this file")
+
+    # File information
+    file = models.FileField(upload_to=secure_file_upload_path, help_text="Upload file (image, audio, video, document, etc.)")
+    file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES, default='image', db_index=True)
+    original_filename = models.CharField(max_length=255, blank=True, help_text="Original filename when uploaded")
+    file_size = models.BigIntegerField(default=0, help_text="File size in bytes")
+    mime_type = models.CharField(max_length=100, blank=True, help_text="MIME type of the file")
+
+    # Metadata
+    title = models.CharField(max_length=255, blank=True, help_text="Optional title/description")
+    alt_text = models.CharField(max_length=500, blank=True, help_text="Alt text for images (accessibility)")
+
+    # Timestamps
+    uploaded_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Access control
+    is_public = models.BooleanField(default=True, help_text="If false, file requires authentication")
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = "Media File"
+        verbose_name_plural = "Media Files"
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['uuid']),
+            models.Index(fields=['file_type', '-uploaded_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.slug} ({self.file_type})"
+
+    def save(self, *args, **kwargs):
+        # Auto-generate slug from UUID if not provided
+        if not self.slug:
+            self.slug = str(self.uuid)
+
+        # Store original filename
+        if self.file and not self.original_filename:
+            self.original_filename = os.path.basename(self.file.name)
+
+        # Calculate file size
+        if self.file:
+            try:
+                self.file_size = self.file.size
+            except (ValueError, OSError):
+                self.file_size = 0
+
+        super().save(*args, **kwargs)
+
+    def get_file_url(self):
+        """
+        Returns the custom URL for accessing this file.
+        Format: /cdn/{slug}
+        """
+        return f"/cdn/{self.slug}"
+
+    def get_api_url(self):
+        """
+        Returns the API URL for accessing this file.
+        Format: /api/cdn/{slug}
+        """
+        return f"/api/cdn/{self.slug}"
+
+    def get_file_extension(self):
+        """Returns the file extension."""
+        if self.file:
+            return os.path.splitext(self.file.name)[1].lstrip('.')
+        return ''
+
+    def get_file_size_display(self):
+        """Returns human-readable file size."""
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} PB"

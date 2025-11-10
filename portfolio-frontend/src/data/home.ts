@@ -1,12 +1,15 @@
 /**
  * Home Page Data Structure
  *
- * This file contains all home page specific content.
+ * This file fetches home page content from the backend API.
  * Data from other sections (education, experience, projects, etc.)
  * will be dynamically pulled and displayed on the home page.
  *
- * To edit home page content, update the values below.
+ * To edit home page content, update it from the Django admin panel.
  */
+
+import { getApiUrl } from '@/utils/api-config';
+import siteData from './site-data.json';
 
 export interface HomeData {
   hero: {
@@ -60,17 +63,32 @@ export interface HomeData {
     show_blog: boolean;
   };
 }
-import siteData from './site-data.json';
 
-export const homeData: HomeData = (siteData as any).homeData;
+/**
+ * Fetch homeData from backend API
+ */
+export async function fetchHomeData(): Promise<HomeData> {
+  try {
+    const response = await fetch(`${getApiUrl()}/api/home/`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch home data: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.data as HomeData;
+  } catch (error) {
+    console.error('Error fetching home data from API, falling back to JSON:', error);
+    // Fallback to static JSON if API fails
+    return (siteData as any).homeData;
+  }
+}
 
 /**
  * Helper Functions
  */
 
-export const getHeroData = () => homeData.hero;
-export const getAboutData = () => homeData.about;
-export const getStatsData = () => homeData.stats;
-export const getSkillsData = () => homeData.skills;
-export const getSocialLinks = () => homeData.social_links;
-export const getFeaturedSections = () => homeData.featured_sections;
+export const getHeroData = (homeData: HomeData) => homeData.hero;
+export const getAboutData = (homeData: HomeData) => homeData.about;
+export const getStatsData = (homeData: HomeData) => homeData.stats;
+export const getSkillsData = (homeData: HomeData) => homeData.skills;
+export const getSocialLinks = (homeData: HomeData) => homeData.social_links;
+export const getFeaturedSections = (homeData: HomeData) => homeData.featured_sections;
