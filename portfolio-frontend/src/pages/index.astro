@@ -6,7 +6,7 @@ import { getVisibleEducation, educationData } from '@/data/education';
 import { experienceData } from '@/data/experience';
 import { projectsData } from '@/data/projects';
 import { researchData } from '@/data/research';
-import { getNewBlogs } from '@/data/blogs';
+import { getNewBlogs, type BlogPost } from '@/data/blogs';
 import { getVisibleExperience } from '@/data/experience';
 import { getVisibleProjects } from '@/data/projects';
 
@@ -36,7 +36,7 @@ const latestResearch = researchData.research_publications
   })
   .slice(0, 2);
 
-const latestBlogs = getNewBlogs(3);
+const latestBlogs = await getNewBlogs(3);
 
 const { hero, about, stats, skills, social_links, featured_sections, cta } = homeData;
 // Resolve profile image: prefer explicit data path unless it points to /images/ which isn't present in this repo.

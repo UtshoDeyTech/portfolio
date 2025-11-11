@@ -1,29 +1,5 @@
 ---
-// NOTE: Recreating a placeholder interface based on the usage, as the original 
-// import path is external. 
-interface ProjectItem {
-  title?: string;
-  organization?: string;
-  role?: string;
-  type?: 'Professional' | 'Academic' | 'Personal' | string;
-  short_description?: string;
-  description?: string;
-  responsibilities?: string[];
-  achievements?: string[];
-  features?: string[];
-  skills?: string[];
-  tech_stack?: { [key: string]: string[] | string };
-  datasets?: string[];
-  accuracy?: string; // e.g., "98.5%"
-  project_url?: string;
-  github_url?: string;
-  demo_url?: string;
-  collaboration?: string;
-  tags?: string[];
-  start_date?: string;
-  end_date?: string;
-  contributor_count?: number;
-}
+import type { ProjectItem } from '@/data/projects';
 
 interface Props {
   item: ProjectItem;

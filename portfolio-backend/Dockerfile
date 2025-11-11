@@ -12,7 +12,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
-COPY . .
+COPY api /app/api
+COPY manage.py /app/
+COPY portfolio_backend /app/portfolio_backend
+COPY temp_blog.json /app/
 
 # Expose port
 EXPOSE 8000

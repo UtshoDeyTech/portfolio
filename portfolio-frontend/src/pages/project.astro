@@ -145,12 +145,13 @@ const allTags = Array.from(
 
         // Filter projects
         projectItems.forEach(item => {
-          const projectType = item.getAttribute('data-type');
+          const projectItem = item as HTMLElement;
+          const projectType = projectItem.getAttribute('data-type');
           if (filter === 'all' || projectType === filter) {
-            item.style.display = 'block';
-            item.style.animation = 'fadeIn 0.3s ease-in';
+            projectItem.style.display = 'block';
+            projectItem.style.animation = 'fadeIn 0.3s ease-in';
           } else {
-            item.style.display = 'none';
+            projectItem.style.display = 'none';
           }
         });
       });

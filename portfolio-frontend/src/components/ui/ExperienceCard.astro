@@ -1,22 +1,8 @@
 ---
+import type { ExperienceItem } from '@/data/experience';
+
 // NOTE: Interface declarations in the frontmatter
 // Define the shape of our experience item data
-interface ExperienceItem {
-  company_logo_url: string;
-  company_name: string;
-  role: string;
-  employment_type: string;
-  location: string;
-  work_mode: 'Remote' | 'On-Site' | 'Hybrid';
-  description: string;
-  achievements: string[];
-  skills: string[];
-  tech_stack: string[];
-  start_date: string;
-  end_date: string;
-  is_current: boolean;
-};
-
 interface Props {
   item: ExperienceItem;
   isLast?: boolean;
@@ -99,7 +85,7 @@ const getEmploymentTypeStyle = (type: string) => {
         <div class='absolute right-3 top-3 sm:right-6 sm:top-6 w-12 h-12 sm:w-16 sm:h-16 bg-base-100 rounded-xl shadow-lg overflow-hidden p-1.5 sm:p-2 border border-base-300'>
           <img
             src={item.company_logo_url}
-            alt={`${hasCompanyName ? item.company_name : 'Company'} logo`}
+            alt={`${item.company_name || 'Company'} logo`}
             class='w-full h-full object-contain'
             onerror="this.onerror=null;this.src='https://placehold.co/64x64/CBD5E1/475569?text=Logo'"
           />

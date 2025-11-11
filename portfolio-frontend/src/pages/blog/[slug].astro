@@ -45,308 +45,356 @@ const relatedPosts = allPosts
     .filter(p => p.slug !== slug && p.category === category && p.is_published)
     .slice(0, 3);
 
-// Get trending posts (by views)
-const trendingPosts = allPosts
-    .filter(p => p.slug !== slug && p.is_published)
-    .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 4);
-
-// Get recent posts
-const recentPosts = allPosts
-    .filter(p => p.slug !== slug && p.is_published)
-    .sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
-    .slice(0, 4);
+// Get next/previous posts
+const currentIndex = allPosts.findIndex(p => p.slug === slug);
+const previousPost = currentIndex > 0 ? allPosts[currentIndex - 1] : null;
+const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1] : null;
 ---
 
 <Layout title={title}>
     <!-- Reading Progress Bar -->
-    <div class="fixed top-0 left-0 w-full h-1 bg-base-200 z-50">
-        <div id="reading-progress" class="h-full bg-primary transition-all duration-300" style="width: 0%"></div>
+    <div class="fixed top-0 left-0 w-full h-0.5 bg-transparent z-50">
+        <div id="reading-progress" class="h-full bg-primary transition-all duration-150" style="width: 0%"></div>
     </div>
 
     <article class="min-h-screen bg-base-100">
-        <!-- Hero Section -->
-        {cover_image ? (
-            <div class="relative w-full h-[50vh] md:h-[60vh] overflow-hidden bg-base-300">
-                <img
-                    src={cover_image}
-                    alt={title}
-                    class="w-full h-full object-cover"
-                />
-                <div class="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/70 to-transparent"></div>
-            </div>
-        ) : null}
-
-        <!-- Main Container with Sidebar -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col lg:flex-row gap-8">
-                <!-- Main Content Column -->
-                <div class="flex-1 max-w-4xl">
-            <!-- Article Header -->
-            <div class={cover_image ? "-mt-32 relative z-10" : "pt-12 md:pt-16"}>
-                <!-- Category Badge -->
+        <!-- Breadcrumb Navigation -->
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-2">
+            <div class="flex items-center gap-2 text-xs text-base-content/60">
+                <a href="/" class="hover:text-primary transition-colors">Home</a>
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+                <a href="/blog" class="hover:text-primary transition-colors">Blog</a>
                 {category && (
-                    <div class="mb-4">
-                        <span class="inline-block px-4 py-2 bg-primary text-primary-content text-sm font-semibold rounded-lg shadow-lg">
+                    <>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                        <span class="text-base-content">{category}</span>
+                    </>
+                )}
+            </div>
+        </nav>
+
+
+
+        <!-- Main Content Container - Two Column Layout -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 pb-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Main Content Area (Left) -->
+                <main class="lg:col-span-8 xl:col-span-8">
+            
+            <!-- Article Header -->
+            <header class="pt-8 pb-8">
+                {category && (
+                    <a href={`/blog?category=${encodeURIComponent(category)}`} class="inline-block mb-4">
+                        <span class="text-sm font-semibold text-primary uppercase tracking-wide hover:underline">
                             {category}
                         </span>
-                    </div>
+                    </a>
                 )}
-
-                <!-- Title -->
-                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-base-content mb-4 md:mb-6 leading-tight">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-base-content mb-4 leading-tight tracking-tight">
                     {title}
                 </h1>
-
-                <!-- Subtitle -->
                 {subtitle && (
-                    <p class="text-lg md:text-xl text-base-content/70 mb-8 leading-relaxed">
+                    <p class="text-lg md:text-xl text-base-content/60 leading-relaxed mb-6">
                         {subtitle}
                     </p>
                 )}
+            </header>
 
-                <!-- Author & Meta Info -->
-                <div class="flex flex-wrap items-center gap-4 md:gap-6 py-6 border-y border-base-300 mb-8">
-                    <div class="flex items-center gap-3">
-                        <div class="avatar placeholder">
-                            <div class="bg-primary text-primary-content rounded-full w-12 h-12">
-                                <span class="text-lg font-bold">{author?.charAt(0) || 'A'}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="font-semibold text-base-content">{author || 'Anonymous'}</p>
-                            <p class="text-sm text-base-content/60">Author</p>
+            <!-- Author & Meta Info -->
+            <div class="flex flex-wrap items-center gap-4 pb-6 mb-6 border-b border-base-300">
+                <div class="flex items-center gap-3">
+                    <div class="avatar placeholder">
+                        <div class="bg-primary text-primary-content rounded-full w-10 h-10">
+                            <span class="text-sm font-bold">{author?.charAt(0) || 'A'}</span>
                         </div>
                     </div>
-
-                    <div class="flex flex-wrap items-center gap-4 text-sm text-base-content/60">
+                    <div class="flex flex-wrap items-center gap-2 text-sm">
+                        <span class="font-medium text-base-content">{author || 'Anonymous'}</span>
                         {published_date && (
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                                <time datetime={published_date}>
-                                    {new Date(published_date).toLocaleDateString('en-US', {
+                            <>
+                                <span class="text-base-content/40">•</span>
+                                <time datetime={published_date} class="text-base-content/60">
+                                    {new Intl.DateTimeFormat('en-US', {
                                         year: 'numeric',
                                         month: 'short',
                                         day: 'numeric',
-                                    })}
+                                    }).format(new Date(published_date))}
                                 </time>
-                            </div>
+                            </>
                         )}
                         {read_time && (
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span>{read_time} min read</span>
-                            </div>
+                            <>
+                                <span class="text-base-content/40">•</span>
+                                <span class="text-base-content/60">{read_time} min read</span>
+                            </>
                         )}
                     </div>
                 </div>
 
-                <!-- Tags -->
-                {tags && tags.length > 0 && (
-                    <div class="flex flex-wrap gap-2 mb-8">
-                        {tags.map(tag => (
-                            <span class="badge badge-outline badge-lg">{tag}</span>
-                        ))}
-                    </div>
-                )}
+                <div class="ml-auto">
+                    <BlogInteractions
+                        client:load
+                        slug={slug!}
+                        initialViews={views || 0}
+                        initialLikes={likes || 0}
+                    />
+                </div>
             </div>
 
-            <!-- Engagement Stats -->
-            <div class="mb-8">
-                <BlogInteractions
-                    client:load
-                    slug={slug!}
-                    initialViews={views || 0}
-                    initialLikes={likes || 0}
-                />
-            </div>
+            <!-- Tags -->
+            {tags && tags.length > 0 && (
+                <div class="flex flex-wrap gap-2 mb-8">
+                    {tags.map(tag => (
+                        <a 
+                            href={`/blog?tag=${encodeURIComponent(tag)}`}
+                            class="text-xs px-3 py-1 bg-base-200 hover:bg-primary hover:text-primary-content rounded-full transition-colors"
+                        >
+                            #{tag}
+                        </a>
+                    ))}
+                </div>
+            )}
+
+            <!-- Featured Image (if exists) -->
+            {cover_image && (
+                <figure class="mb-10 -mx-4 sm:-mx-6 md:mx-0">
+                    <img
+                        src={cover_image}
+                        alt={title}
+                        class="w-full rounded-none md:rounded-xl shadow-lg"
+                    />
+                </figure>
+            )}
 
             <!-- Article Content -->
             <div class="prose prose-lg max-w-none mb-12
-                prose-headings:text-base-content prose-headings:font-bold
-                prose-h1:text-3xl prose-h1:mb-6 prose-h1:mt-10
-                prose-h2:text-2xl prose-h2:mb-4 prose-h2:mt-10 prose-h2:border-b prose-h2:border-base-300 prose-h2:pb-3
-                prose-h3:text-xl prose-h3:mb-3 prose-h3:mt-8
-                prose-h4:text-lg prose-h4:mb-2 prose-h4:mt-6
-                prose-p:text-base-content/80 prose-p:mb-6 prose-p:leading-relaxed prose-p:text-lg
+                prose-headings:font-bold prose-headings:text-base-content
+                prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-8
+                prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b prose-h2:border-base-300
+                prose-h3:text-xl prose-h3:mb-3 prose-h3:mt-6
+                prose-h4:text-lg prose-h4:mb-2 prose-h4:mt-5
+                prose-p:text-base-content/80 prose-p:mb-5 prose-p:leading-relaxed
                 prose-strong:text-base-content prose-strong:font-semibold
-                prose-em:italic prose-em:text-base-content/70
-                prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium
-                prose-code:text-accent prose-code:bg-base-200 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-[''] prose-code:after:content-['']
-                prose-pre:bg-base-300 prose-pre:text-base-content prose-pre:rounded-xl prose-pre:shadow-lg prose-pre:my-8 prose-pre:p-6
-                prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:bg-base-200 prose-blockquote:pl-6 prose-blockquote:py-4 prose-blockquote:my-8 prose-blockquote:italic prose-blockquote:rounded-r-lg
-                prose-ul:list-disc prose-ul:pl-6 prose-ul:my-6 prose-ul:space-y-2
-                prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-6 prose-ol:space-y-2
-                prose-li:text-base-content/80 prose-li:leading-relaxed
-                prose-img:rounded-xl prose-img:shadow-2xl prose-img:my-10 prose-img:w-full
-                prose-hr:border-base-300 prose-hr:my-10
-                prose-table:w-full prose-table:border-collapse prose-table:my-8 prose-table:overflow-hidden prose-table:rounded-lg
-                prose-thead:bg-base-200
-                prose-th:border prose-th:border-base-300 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:font-semibold
-                prose-td:border prose-td:border-base-300 prose-td:px-4 prose-td:py-3
+                prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                prose-code:text-accent prose-code:bg-base-200 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-[''] prose-code:after:content-['']
+                prose-pre:bg-base-300 prose-pre:rounded-lg prose-pre:my-6 prose-pre:p-4
+                prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:bg-base-200/50 prose-blockquote:pl-4 prose-blockquote:py-2 prose-blockquote:my-6 prose-blockquote:not-italic
+                prose-ul:my-4 prose-ul:space-y-1
+                prose-ol:my-4 prose-ol:space-y-1
+                prose-li:text-base-content/80
+                prose-img:rounded-lg prose-img:my-6
+                prose-hr:border-base-300 prose-hr:my-8
+                prose-table:my-6
+                prose-th:px-3 prose-th:py-2
+                prose-td:px-3 prose-td:py-2
                 "
             >
                 {content_html && <div set:html={content_html} />}
             </div>
 
-            <!-- Share Section -->
-            <div class="flex flex-wrap items-center justify-between gap-4 p-6 bg-base-200 rounded-xl mb-12">
-                <p class="font-semibold text-base-content">Share this article</p>
-                <div class="flex gap-2">
-                    <button
-                        onclick={`window.open('https://twitter.com/intent/tweet?text=${encodeURIComponent(title || '')}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}','_blank','width=550,height=420')`}
-                        class="btn btn-circle btn-ghost"
-                        aria-label="Share on Twitter"
-                    >
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
-                        </svg>
-                    </button>
-                    <button
-                        onclick={`window.open('https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}','_blank','width=550,height=420')`}
-                        class="btn btn-circle btn-ghost"
-                        aria-label="Share on LinkedIn"
-                    >
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"></path>
-                        </svg>
-                    </button>
-                    <button
-                        onclick={`navigator.clipboard.writeText('${typeof window !== 'undefined' ? window.location.href : ''}').then(() => alert('Link copied!'))`}
-                        class="btn btn-circle btn-ghost"
-                        aria-label="Copy link"
-                    >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
             <!-- Related Articles -->
             {relatedPosts.length > 0 && (
-                <div class="mb-12">
+                <section class="mb-12 pt-8 border-t border-base-300">
                     <h2 class="text-2xl font-bold text-base-content mb-6">Related Articles</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {relatedPosts.map(relatedPost => (
                             <a
                                 href={`/blog/${relatedPost.slug}`}
-                                class="card bg-base-200 hover:shadow-xl transition-all group"
+                                class="group block hover:bg-base-200 rounded-lg overflow-hidden transition-colors border border-base-300"
                             >
                                 {relatedPost.cover_image && (
-                                    <figure class="overflow-hidden">
+                                    <div class="overflow-hidden aspect-video bg-base-300">
                                         <img
                                             src={relatedPost.cover_image}
                                             alt={relatedPost.title}
-                                            class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
-                                    </figure>
+                                    </div>
                                 )}
-                                <div class="card-body p-4">
-                                    <h3 class="card-title text-base group-hover:text-primary transition-colors line-clamp-2">
+                                <div class="p-4">
+                                    {relatedPost.category && (
+                                        <span class="text-xs text-primary font-medium mb-1 block">
+                                            {relatedPost.category}
+                                        </span>
+                                    )}
+                                    <h3 class="font-semibold text-base group-hover:text-primary transition-colors mb-1 line-clamp-2">
                                         {relatedPost.title}
                                     </h3>
-                                    <p class="text-sm text-base-content/60">
-                                        {relatedPost.read_time} min read
-                                    </p>
+                                    <div class="flex items-center gap-2 text-xs text-base-content/50 mt-2">
+                                        {relatedPost.read_time && <span>{relatedPost.read_time} min</span>}
+                                    </div>
                                 </div>
                             </a>
                         ))}
                     </div>
-                </div>
+                </section>
             )}
 
-            <!-- Newsletter Signup -->
-            <div class="card bg-gradient-to-br from-primary to-accent text-primary-content shadow-xl mb-12">
-                <div class="card-body p-8 md:p-12 text-center">
-                    <h2 class="card-title text-2xl md:text-3xl font-bold justify-center mb-4">
-                        Subscribe to Newsletter
-                    </h2>
-                    <p class="text-base md:text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                        Get notified about new articles and updates directly in your inbox.
-                    </p>
-                    <form id="newsletter-form" class="w-full max-w-md mx-auto">
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <input
-                                type="email"
-                                id="newsletter-email"
-                                placeholder="your@email.com"
-                                class="input input-bordered w-full bg-white text-base-content"
-                                required
-                            />
-                            <button type="submit" class="btn btn-neutral" id="newsletter-btn">
-                                Subscribe
-                            </button>
-                        </div>
-                        <div id="newsletter-message" class="text-sm mt-3 hidden"></div>
-                    </form>
-                </div>
-            </div>
+            <!-- Next/Previous Navigation -->
+            {(previousPost || nextPost) && (
+                <nav class="flex flex-col sm:flex-row justify-between gap-4 mb-10 pb-8 border-b border-base-300">
+                    {previousPost ? (
+                        <a
+                            href={`/blog/${previousPost.slug}`}
+                            class="flex-1 group p-4 hover:bg-base-200 rounded-lg transition-colors"
+                        >
+                            <div class="flex items-center gap-1 text-xs text-base-content/60 mb-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                </svg>
+                                <span>Previous</span>
+                            </div>
+                            <h3 class="font-medium text-sm text-base-content group-hover:text-primary transition-colors line-clamp-2">
+                                {previousPost.title}
+                            </h3>
+                        </a>
+                    ) : <div class="flex-1"></div>}
+                    
+                    {nextPost ? (
+                        <a
+                            href={`/blog/${nextPost.slug}`}
+                            class="flex-1 group p-4 hover:bg-base-200 rounded-lg transition-colors text-right"
+                        >
+                            <div class="flex items-center justify-end gap-1 text-xs text-base-content/60 mb-1">
+                                <span>Next</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                            <h3 class="font-medium text-sm text-base-content group-hover:text-primary transition-colors line-clamp-2">
+                                {nextPost.title}
+                            </h3>
+                        </a>
+                    ) : <div class="flex-1"></div>}
+                </nav>
+            )}
 
             <!-- Comments Section -->
-            <div class="mb-12">
-                <CommentSection
-                    client:load
-                    slug={slug!}
-                    allowComments={allow_comments ?? true}
-                    initialCommentsCount={comments_count || 0}
-                />
-            </div>
+            {allow_comments && (
+                <section class="mb-10">
+                    <CommentSection
+                        client:load
+                        slug={slug!}
+                        allowComments={allow_comments}
+                        initialCommentsCount={comments_count || 0}
+                    />
+                </section>
+            )}
+                
+                </main>
+                <!-- End Main Content -->
+                
+                <!-- Sticky Sidebar (Right) -->
+                <aside class="hidden lg:block lg:col-span-4 xl:col-span-4">
+                    <div class="sticky top-20 space-y-6">
+                        
+                        <!-- Table of Contents -->
+                        <div class="card bg-base-200 border border-base-300 shadow-sm">
+                            <div class="card-body p-5">
+                                <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                                    </svg>
+                                    Table of Contents
+                                </h3>
+                                <nav id="toc" class="text-sm space-y-2">
+                                    <!-- TOC will be generated by JavaScript -->
+                                </nav>
+                            </div>
+                        </div>
 
-            <!-- Navigation -->
-            <div class="pb-12 pt-8 border-t border-base-300">
-                <a href="/blog" class="btn btn-outline btn-lg gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    Back to All Articles
-                </a>
-            </div>
-                </div>
-                <!-- End Main Content Column -->
+                        <!-- Author Card -->
+                        <div class="card bg-base-200 border border-base-300 shadow-sm">
+                            <div class="card-body p-5">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-primary text-primary-content rounded-full w-12 h-12">
+                                            <span class="text-lg font-bold">{author?.charAt(0) || 'A'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-base-content">{author || 'Anonymous'}</p>
+                                        <p class="text-xs text-base-content/60">Author</p>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-base-content/70">
+                                    Software engineer and technical writer sharing insights on web development, AI, and software engineering.
+                                </p>
+                            </div>
+                        </div>
 
-                <!-- Sticky Sidebar - Blog Suggestions (Desktop Only) -->
-                <aside class="hidden lg:block w-80 flex-shrink-0 pt-8">
-                    <div class="sticky top-24 space-y-6">
-                        <!-- Trending Articles -->
-                        {trendingPosts.length > 0 && (
-                            <div class="card bg-base-200 shadow-lg">
+                        <!-- Share This Post -->
+                        <div class="card bg-base-200 border border-base-300 shadow-sm">
+                            <div class="card-body p-5">
+                                <h3 class="font-bold text-base mb-3">Share this post</h3>
+                                <div class="flex flex-col gap-2">
+                                    <button
+                                        id="share-twitter"
+                                        class="btn btn-sm btn-outline gap-2 justify-start"
+                                    >
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+                                        </svg>
+                                        Share on Twitter
+                                    </button>
+                                    <button
+                                        id="share-linkedin"
+                                        class="btn btn-sm btn-outline gap-2 justify-start"
+                                    >
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"></path>
+                                        </svg>
+                                        Share on LinkedIn
+                                    </button>
+                                    <button
+                                        id="copy-link-btn"
+                                        class="btn btn-sm btn-outline gap-2 justify-start"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                        </svg>
+                                        Copy link
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Trending Posts -->
+                        {allPosts.length > 0 && (
+                            <div class="card bg-base-200 border border-base-300 shadow-sm">
                                 <div class="card-body p-5">
-                                    <div class="flex items-center gap-2 mb-4">
+                                    <h3 class="font-bold text-base mb-3 flex items-center gap-2">
                                         <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                         </svg>
-                                        <h3 class="font-bold text-lg">Trending Now</h3>
-                                    </div>
+                                        Trending Posts
+                                    </h3>
                                     <div class="space-y-4">
-                                        {trendingPosts.map((post, index) => (
+                                        {allPosts
+                                            .filter(p => p.slug !== slug && p.is_published)
+                                            .sort((a, b) => (b.views || 0) - (a.views || 0))
+                                            .slice(0, 5)
+                                            .map((post, index) => (
                                             <a
                                                 href={`/blog/${post.slug}`}
-                                                class="block group hover:bg-base-300 p-2 rounded-lg transition-all"
+                                                class="block group"
                                             >
                                                 <div class="flex gap-3">
-                                                    <div class="flex-shrink-0">
-                                                        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary font-bold text-sm">
-                                                            {index + 1}
-                                                        </span>
-                                                    </div>
+                                                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary font-bold text-xs flex items-center justify-center">
+                                                        {index + 1}
+                                                    </span>
                                                     <div class="flex-1 min-w-0">
-                                                        <h4 class="font-semibold text-sm group-hover:text-primary transition-colors line-clamp-2 mb-1">
+                                                        <h4 class="text-sm font-medium group-hover:text-primary transition-colors line-clamp-2">
                                                             {post.title}
                                                         </h4>
-                                                        <div class="flex items-center gap-2 text-xs text-base-content/60">
-                                                            <span>{post.views || 0} views</span>
-                                                            {post.read_time && (
-                                                                <>
-                                                                    <span>•</span>
-                                                                    <span>{post.read_time} min</span>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                        <p class="text-xs text-base-content/60 mt-1">
+                                                            {post.views || 0} views
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </a>
@@ -356,96 +404,173 @@ const recentPosts = allPosts
                             </div>
                         )}
 
-                        <!-- Recent Articles -->
-                        {recentPosts.length > 0 && (
-                            <div class="card bg-base-200 shadow-lg">
-                                <div class="card-body p-5">
-                                    <div class="flex items-center gap-2 mb-4">
-                                        <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        <h3 class="font-bold text-lg">Recent Posts</h3>
-                                    </div>
-                                    <div class="space-y-3">
-                                        {recentPosts.map(post => (
-                                            <a
-                                                href={`/blog/${post.slug}`}
-                                                class="block group hover:bg-base-300 p-2 rounded-lg transition-all"
-                                            >
-                                                <h4 class="font-semibold text-sm group-hover:text-primary transition-colors line-clamp-2 mb-1">
-                                                    {post.title}
-                                                </h4>
-                                                <p class="text-xs text-base-content/60">
-                                                    {new Date(post.published_date).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })}
-                                                </p>
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <!-- Newsletter CTA (Sticky Sidebar) -->
-                        <div class="card bg-gradient-to-br from-primary to-accent text-primary-content shadow-lg">
+                        <!-- Newsletter Signup -->
+                        <div class="card bg-gradient-to-br from-primary/10 to-accent/10 border border-base-300 shadow-sm">
                             <div class="card-body p-5">
-                                <h3 class="font-bold text-lg mb-2">Never Miss a Post</h3>
-                                <p class="text-sm opacity-90 mb-4">
-                                    Get weekly updates delivered to your inbox.
+                                <h3 class="font-bold text-base mb-2">Subscribe to Newsletter</h3>
+                                <p class="text-sm text-base-content/70 mb-4">
+                                    Get updates on new articles weekly.
                                 </p>
                                 <form id="newsletter-form-sidebar" class="space-y-2">
                                     <input
                                         type="email"
                                         id="newsletter-email-sidebar"
                                         placeholder="your@email.com"
-                                        class="input input-bordered input-sm w-full bg-white text-base-content"
+                                        class="input input-sm input-bordered w-full bg-base-100"
                                         required
                                     />
-                                    <button type="submit" class="btn btn-sm btn-neutral w-full" id="newsletter-btn-sidebar">
+                                    <button type="submit" class="btn btn-sm btn-primary w-full" id="newsletter-btn-sidebar">
                                         Subscribe
                                     </button>
                                     <div id="newsletter-message-sidebar" class="text-xs mt-2 hidden"></div>
                                 </form>
                             </div>
                         </div>
+
                     </div>
                 </aside>
-                <!-- End Sticky Sidebar -->
+                <!-- End Sidebar -->
+                
             </div>
+        </div>
+
+        <!-- Newsletter CTA Section -->
+        <section class="bg-base-200 border-y border-base-300">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+                <div class="max-w-2xl mx-auto text-center">
+                    <h2 class="text-2xl font-bold text-base-content mb-3">
+                        Never Miss an Update
+                    </h2>
+                    <p class="text-base text-base-content/70 mb-6">
+                        Subscribe to get the latest articles delivered to your inbox weekly.
+                    </p>
+                    <form id="newsletter-form" class="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
+                        <input
+                            type="email"
+                            id="newsletter-email"
+                            placeholder="your@email.com"
+                            class="input input-bordered flex-1 bg-base-100"
+                            required
+                        />
+                        <button type="submit" class="btn btn-primary" id="newsletter-btn">
+                            Subscribe
+                        </button>
+                    </form>
+                    <div id="newsletter-message" class="text-sm mt-3 hidden"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Back to Blog -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <a href="/blog" class="inline-flex items-center gap-2 text-sm text-base-content/60 hover:text-primary transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                <span>Back to all articles</span>
+            </a>
         </div>
     </article>
 
     <!-- Reading Progress Script -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Reading Progress
             const progressBar = document.getElementById('reading-progress');
-            if (!progressBar) return;
-
+            
             const updateProgress = () => {
                 const scrollTop = window.scrollY;
                 const docHeight = document.documentElement.scrollHeight - window.innerHeight;
                 const scrollPercent = (scrollTop / docHeight) * 100;
-                progressBar.style.width = `${Math.min(scrollPercent, 100)}%`;
+                
+                if (progressBar) {
+                    progressBar.style.width = `${Math.min(scrollPercent, 100)}%`;
+                }
             };
 
             window.addEventListener('scroll', updateProgress);
             updateProgress();
+
+            // Generate Table of Contents
+            const tocContainer = document.getElementById('toc');
+            if (tocContainer) {
+                const headings = document.querySelectorAll('.prose h2, .prose h3');
+                
+                if (headings.length > 0) {
+                    headings.forEach((heading, index) => {
+                        // Add ID to heading if it doesn't have one
+                        if (!heading.id) {
+                            heading.id = `heading-${index}`;
+                        }
+                        
+                        const level = heading.tagName === 'H2' ? 0 : 1;
+                        const link = document.createElement('a');
+                        link.href = `#${heading.id}`;
+                        link.textContent = heading.textContent;
+                        link.className = `block py-1 text-base-content/70 hover:text-primary transition-colors ${level === 1 ? 'pl-4 text-xs' : 'font-medium'}`;
+                        
+                        tocContainer.appendChild(link);
+                    });
+
+                    // Smooth scroll
+                    tocContainer.querySelectorAll('a').forEach(link => {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const target = document.querySelector(link.getAttribute('href'));
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        });
+                    });
+                } else {
+                    tocContainer.innerHTML = '<p class="text-sm text-base-content/50">No headings found</p>';
+                }
+            }
+
+            // Copy link button
+            const copyBtn = document.getElementById('copy-link-btn') as HTMLButtonElement | null;
+            if (copyBtn) {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                        copyBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    });
+                });
+            }
+
+            // Share buttons
+            const shareTwitterBtn = document.getElementById('share-twitter');
+            if (shareTwitterBtn) {
+                shareTwitterBtn.addEventListener('click', () => {
+                    const text = encodeURIComponent(document.title);
+                    const url = encodeURIComponent(window.location.href);
+                    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+                });
+            }
+
+            const shareLinkedinBtn = document.getElementById('share-linkedin');
+            if (shareLinkedinBtn) {
+                shareLinkedinBtn.addEventListener('click', () => {
+                    const url = encodeURIComponent(window.location.href);
+                    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=550,height=420');
+                });
+            }
         });
     </script>
 
     <!-- Newsletter Subscription Script -->
     <script>
         // Function to handle newsletter subscription
-        async function handleNewsletterSubmit(formId, emailId, btnId, msgId) {
+        async function handleNewsletterSubmit(formId: string, emailId: string, btnId: string, msgId: string) {
             const form = document.getElementById(formId);
-            const emailInput = document.getElementById(emailId);
-            const submitBtn = document.getElementById(btnId);
+            const emailInput = document.getElementById(emailId) as HTMLInputElement | null;
+            const submitBtn = document.getElementById(btnId) as HTMLButtonElement | null;
             const messageDiv = document.getElementById(msgId);
 
-            if (!form) return;
+            if (!form || !emailInput || !submitBtn || !messageDiv) return;
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -453,7 +578,6 @@ const recentPosts = allPosts
                 const email = emailInput.value.trim();
                 if (!email) return;
 
-                // Disable form during submission
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Subscribing...';
                 messageDiv.classList.add('hidden');
@@ -470,21 +594,21 @@ const recentPosts = allPosts
                     const data = await response.json();
 
                     if (response.ok && data.success) {
-                        // Success
-                        messageDiv.textContent = data.message || 'Successfully subscribed!';
-                        messageDiv.className = 'text-sm mt-3 p-3 bg-success/20 text-success-content rounded-lg';
+                        messageDiv.textContent = data.message || '✓ Successfully subscribed!';
+                        messageDiv.className = 'text-xs mt-2 p-2 bg-success/20 text-success rounded';
+                        messageDiv.classList.remove('hidden');
                         emailInput.value = '';
                     } else {
-                        // Error
-                        messageDiv.textContent = data.message || 'Failed to subscribe. Please try again.';
-                        messageDiv.className = 'text-sm mt-3 p-3 bg-error/20 text-error-content rounded-lg';
+                        messageDiv.textContent = data.message || 'Failed to subscribe';
+                        messageDiv.className = 'text-xs mt-2 p-2 bg-error/20 text-error rounded';
+                        messageDiv.classList.remove('hidden');
                     }
                 } catch (error) {
                     console.error('Newsletter subscription error:', error);
-                    messageDiv.textContent = 'Network error. Please try again later.';
-                    messageDiv.className = 'text-sm mt-3 p-3 bg-error/20 text-error-content rounded-lg';
+                    messageDiv.textContent = 'Network error. Please try again.';
+                    messageDiv.className = 'text-xs mt-2 p-2 bg-error/20 text-error rounded';
+                    messageDiv.classList.remove('hidden');
                 } finally {
-                    // Re-enable form
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Subscribe';
                 }

@@ -57,10 +57,20 @@ export interface ResearchData {
     title?: string;
     subtitle?: string;
     stats_labels?: {
-      total_publications?: string;
+      publications?: string;
+      citations?: string;
       research_areas?: string;
     };
-    empty_text?: string;
+    publications_by_type_title?: string;
+    no_publications_text?: string;
+    research_areas_title?: string;
+    cta?: {
+      title?: string;
+      paragraph?: string;
+      contact_email?: string;
+      scholar_url?: string;
+      scholar_text?: string;
+    };
   };
   research_publications: ResearchPublication[];
 }
