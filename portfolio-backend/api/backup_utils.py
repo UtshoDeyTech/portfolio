@@ -18,6 +18,7 @@ def export_portfolio_data(export_dir=None):
     """
     Export all portfolio data to a directory structure.
     Returns the path to the created zip file.
+    Raises exceptions with detailed messages if export fails.
     """
     from .models import (
         EducationEntry, ExperienceEntry, Project, ResearchPublication,
@@ -25,37 +26,46 @@ def export_portfolio_data(export_dir=None):
         BlogSettings, MediaFile
     )
 
-    # Create export directory
-    if export_dir is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        export_dir = Path(settings.BASE_DIR) / 'exports' / f'portfolio_backup_{timestamp}'
-    else:
-        export_dir = Path(export_dir)
+    try:
+        # Create export directory
+        if export_dir is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            export_dir = Path(settings.BASE_DIR) / 'exports' / f'portfolio_backup_{timestamp}'
+        else:
+            export_dir = Path(export_dir)
 
-    export_dir.mkdir(parents=True, exist_ok=True)
+        export_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        raise Exception(f"Failed to create export directory: {type(e).__name__}: {str(e)}")
 
     # 1. Export all models as JSON
-    json_dir = export_dir / 'json_data'
-    json_dir.mkdir(exist_ok=True)
+    try:
+        json_dir = export_dir / 'json_data'
+        json_dir.mkdir(exist_ok=True)
 
-    models_to_export = [
-        ('education', EducationEntry),
-        ('experience', ExperienceEntry),
-        ('projects', Project),
-        ('research', ResearchPublication),
-        ('research_icons', ResearchIcon),
-        ('home_data', HomeData),
-        ('blogs', Blog),
-        ('blog_comments', BlogComment),
-        ('blogs_data', BlogsData),
-        ('blog_settings', BlogSettings),
-        ('media_files', MediaFile),
-    ]
+        models_to_export = [
+            ('education', EducationEntry),
+            ('experience', ExperienceEntry),
+            ('projects', Project),
+            ('research', ResearchPublication),
+            ('research_icons', ResearchIcon),
+            ('home_data', HomeData),
+            ('blogs', Blog),
+            ('blog_comments', BlogComment),
+            ('blogs_data', BlogsData),
+            ('blog_settings', BlogSettings),
+            ('media_files', MediaFile),
+        ]
 
-    for name, model in models_to_export:
-        data = serializers.serialize('json', model.objects.all(), indent=2)
-        with open(json_dir / f'{name}.json', 'w', encoding='utf-8') as f:
-            f.write(data)
+        for name, model in models_to_export:
+            try:
+                data = serializers.serialize('json', model.objects.all(), indent=2)
+                with open(json_dir / f'{name}.json', 'w', encoding='utf-8') as f:
+                    f.write(data)
+            except Exception as e:
+                raise Exception(f"Failed to export {name}: {type(e).__name__}: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Failed to export JSON data: {str(e)}")
 
     # 2. Export blogs as markdown files
     blogs_dir = export_dir / 'blogs_markdown'
@@ -257,7 +267,9 @@ def import_portfolio_data(zip_path, overwrite=False):
                                 count += 1
                             results['imported'][filename] = count
                     except Exception as e:
-                        results['errors'].append(f"Error importing {filename}: {str(e)}")
+                        error_msg = f"Error importing {filename}: {type(e).__name__}: {str(e)}"
+                        results['errors'].append(error_msg)
+                        results['imported'][filename] = 0
 
         # Restore media files
         media_dir = import_dir / 'media_files'

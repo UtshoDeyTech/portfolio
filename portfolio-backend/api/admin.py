@@ -15,6 +15,7 @@ from .models import (
     BlogView,
     BlogLike,
     MediaFile,
+    BackupRestore,
 )
 
 
@@ -623,3 +624,41 @@ class MediaFileAdmin(admin.ModelAdmin):
         urls_text = '\n'.join(urls)
         self.message_user(request, f'CDN URLs:\n{urls_text}')
     copy_cdn_urls.short_description = "Show CDN URLs for selected files"
+
+
+@admin.register(BackupRestore)
+class BackupRestoreAdmin(admin.ModelAdmin):
+    """
+    Custom admin for Backup & Restore functionality.
+    This doesn't manage a real model - just provides a UI for backup/restore.
+    """
+    change_list_template = 'admin/backup_restore.html'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def get_queryset(self, request):
+        """Return empty queryset since this model has no database table."""
+        return self.model.objects.none()
+
+    def changelist_view(self, request, extra_context=None):
+        """Override to show our custom backup/restore page without querying database."""
+        from django.shortcuts import render
+
+        extra_context = extra_context or {}
+        extra_context.update({
+            'title': 'Backup & Restore',
+            'app_label': self.model._meta.app_label,
+            'has_add_permission': self.has_add_permission(request),
+            'has_change_permission': self.has_change_permission(request),
+            'has_delete_permission': self.has_delete_permission(request),
+            'opts': self.model._meta,
+        })
+
+        return render(request, self.change_list_template, extra_context)

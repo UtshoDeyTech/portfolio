@@ -1,0 +1,155 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 20px;">
+    <h1 style="margin-bottom: 10px;">📦 Backup & Restore</h1>
+    <p style="color: #666; margin-bottom: 30px;">Export all your portfolio data or restore from a previous backup.</p>
+
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div class="{% if message.tags %}alert alert-{{ message.tags }}{% endif %}"
+             style="padding: 15px; margin-bottom: 15px; border-radius: 6px;
+                    background: {% if 'success' in message.tags %}#d4edda{% elif 'error' in message.tags %}#f8d7da{% else %}#d1ecf1{% endif %};
+                    border: 1px solid {% if 'success' in message.tags %}#c3e6cb{% elif 'error' in message.tags %}#f5c6cb{% else %}#bee5eb{% endif %};
+                    color: {% if 'success' in message.tags %}#155724{% elif 'error' in message.tags %}#721c24{% else %}#0c5460{% endif %};">
+            {{ message|linebreaksbr }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1200px;">
+        <!-- Export Section -->
+        <div style="padding: 30px; background: #f8f9fa; border-radius: 12px; border: 2px solid #e9ecef;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <span style="font-size: 48px;">📥</span>
+                <div>
+                    <h2 style="margin: 0; color: #28a745;">Export Data</h2>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Download all portfolio data as a ZIP file</p>
+                </div>
+            </div>
+
+            <div style="margin: 20px 0; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid #28a745;">
+                <h4 style="margin-top: 0; color: #333;">What's included:</h4>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
+                    <li>All database records (JSON format)</li>
+                    <li>Blog posts in Markdown format</li>
+                    <li>All uploaded media files</li>
+                    <li>Configuration and metadata</li>
+                </ul>
+            </div>
+
+            <a href="{% url 'admin-portfolio-export' %}"
+               style="display: block; text-align: center; padding: 16px 32px; background: #28a745; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background 0.3s;">
+                📥 Export All Data
+            </a>
+
+            <p style="margin-top: 15px; color: #6c757d; font-size: 13px; text-align: center;">
+                💡 The export file will download automatically
+            </p>
+        </div>
+
+        <!-- Import Section -->
+        <div style="padding: 30px; background: #fff3cd; border-radius: 12px; border: 2px solid #ffc107;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <span style="font-size: 48px;">📤</span>
+                <div>
+                    <h2 style="margin: 0; color: #856404;">Import Data</h2>
+                    <p style="margin: 5px 0 0 0; color: #856404; font-size: 14px;">Restore from a backup ZIP file</p>
+                </div>
+            </div>
+
+            <div style="margin: 20px 0; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid #ffc107;">
+                <h4 style="margin-top: 0; color: #856404;">⚠️ Warning:</h4>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #856404;">
+                    <li><strong>This will overwrite all existing data</strong></li>
+                    <li>All current records will be deleted</li>
+                    <li>This action cannot be undone</li>
+                    <li>Make sure to export current data first!</li>
+                </ul>
+            </div>
+
+            <button type="button" onclick="document.getElementById('import-form').style.display='block'; this.style.display='none';"
+                    style="display: block; width: 100%; padding: 16px 32px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                📤 Import Portfolio Data
+            </button>
+
+            <!-- Hidden Import Form -->
+            <div id="import-form" style="display: none; margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #dc3545;">
+                <h4 style="margin-top: 0; color: #dc3545;">⚠️ Import Portfolio Data</h4>
+                <form method="post" action="{% url 'admin-portfolio-import' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div style="margin: 15px 0;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Select Backup ZIP File:</label>
+                        <input type="file" name="backup_file" accept=".zip" required
+                               style="padding: 10px; border: 2px solid #ddd; border-radius: 6px; width: 100%; font-size: 14px;">
+                    </div>
+
+                    <div style="margin: 20px 0; padding: 15px; background: #f8d7da; border-radius: 6px; border: 1px solid #f5c6cb;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" name="overwrite" value="yes" required style="width: 20px; height: 20px;">
+                            <span style="color: #721c24; font-weight: 600; font-size: 15px;">I understand this will OVERWRITE all existing data and cannot be undone</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button type="submit"
+                                style="flex: 1; padding: 12px 24px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px;">
+                            Import Now
+                        </button>
+                        <button type="button" onclick="document.getElementById('import-form').style.display='none';"
+                                style="flex: 1; padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px;">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information Section -->
+    <div style="margin-top: 40px; padding: 25px; background: #e7f3ff; border-radius: 12px; border: 2px solid #b3d9ff; max-width: 1200px;">
+        <h3 style="margin-top: 0; color: #004085; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">ℹ️</span> How it Works
+        </h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; color: #004085;">
+            <div>
+                <h4 style="margin-top: 0;">📥 Export Process:</h4>
+                <ol style="padding-left: 20px; line-height: 1.8;">
+                    <li>Gathers all data from database</li>
+                    <li>Converts to portable JSON format</li>
+                    <li>Includes all media files</li>
+                    <li>Creates timestamped ZIP file</li>
+                    <li>Downloads to your computer</li>
+                </ol>
+            </div>
+            <div>
+                <h4 style="margin-top: 0;">📤 Import Process:</h4>
+                <ol style="padding-left: 20px; line-height: 1.8;">
+                    <li>Upload your backup ZIP file</li>
+                    <li>System validates the backup</li>
+                    <li>Clears existing data (if confirmed)</li>
+                    <li>Restores all records</li>
+                    <li>Copies media files back</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Best Practices -->
+    <div style="margin-top: 20px; padding: 20px; background: #d1f2eb; border-radius: 12px; border: 2px solid #a2dcc8; max-width: 1200px;">
+        <h3 style="margin-top: 0; color: #0c5547; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 24px;">💡</span> Best Practices
+        </h3>
+        <ul style="padding-left: 20px; line-height: 1.8; color: #0c5547;">
+            <li><strong>Regular Backups:</strong> Export your data regularly (e.g., weekly) to prevent data loss</li>
+            <li><strong>Before Major Changes:</strong> Always export before making significant changes to your portfolio</li>
+            <li><strong>Safe Storage:</strong> Store backup files in multiple locations (local drive, cloud storage)</li>
+            <li><strong>Test Imports:</strong> Occasionally test your backups on a development environment</li>
+            <li><strong>Version Control:</strong> Keep multiple backup versions with timestamps</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

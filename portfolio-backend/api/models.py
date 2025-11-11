@@ -144,8 +144,8 @@ class HomeData(models.Model):
 
     # About Section
     about_title = models.CharField(max_length=255, default="About Me")
-    about_paragraphs = models.JSONField(default=list, help_text="List of paragraphs for about section")
-    about_highlights = models.JSONField(default=list, help_text="List of key highlights")
+    about_paragraphs = models.JSONField(default=list, blank=True, help_text="List of paragraphs for about section")
+    about_highlights = models.JSONField(default=list, blank=True, help_text="List of key highlights")
 
     # Stats Section
     stats_years_of_experience = models.CharField(max_length=20, blank=True, help_text="e.g., '2+', '5'")
@@ -155,7 +155,7 @@ class HomeData(models.Model):
 
     # Skills Section
     skills_title = models.CharField(max_length=255, default="Technical Skills")
-    skills_categories = models.JSONField(default=list, help_text="List of skill categories with name, icon, and skills list")
+    skills_categories = models.JSONField(default=list, blank=True, help_text="List of skill categories with name, icon, and skills list")
 
     # Social Links
     social_github = models.URLField(blank=True)
@@ -395,6 +395,18 @@ def secure_file_upload_path(instance, filename):
     ext = os.path.splitext(filename)[1].lower()  # Get file extension
     unique_filename = f"{instance.uuid}{ext}"
     return os.path.join('secure_storage', instance.file_type, unique_filename)
+
+
+class BackupRestore(models.Model):
+    """
+    Dummy model for Backup & Restore admin page.
+    This model has no database table - it's just for admin UI.
+    """
+    class Meta:
+        managed = False  # Don't create a database table
+        verbose_name = "Backup & Restore"
+        verbose_name_plural = "Backup & Restore"
+        app_label = 'api'
 
 
 class MediaFile(models.Model):

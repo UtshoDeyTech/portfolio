@@ -33,11 +33,11 @@ def export_portfolio_view(request):
             return response
         else:
             messages.error(request, '❌ Export file was not created.')
-            return redirect('admin:api_homedata_change', 1)
+            return redirect('admin:api_backuprestore_changelist')
 
     except Exception as e:
         messages.error(request, f'❌ Export failed: {str(e)}')
-        return redirect('admin:api_homedata_change', 1)
+        return redirect('admin:api_backuprestore_changelist')
 
 
 @staff_member_required
@@ -47,18 +47,18 @@ def import_portfolio_view(request):
     """
     if request.method != 'POST':
         messages.error(request, '❌ Invalid request method.')
-        return redirect('admin:api_homedata_change', 1)
+        return redirect('admin:api_backuprestore_changelist')
 
     zip_file = request.FILES.get('backup_file')
     overwrite = request.POST.get('overwrite') == 'yes'
 
     if not zip_file:
         messages.error(request, '❌ Please select a backup file.')
-        return redirect('admin:api_homedata_change', 1)
+        return redirect('admin:api_backuprestore_changelist')
 
     if not overwrite:
         messages.error(request, '❌ You must confirm overwrite by checking the checkbox.')
-        return redirect('admin:api_homedata_change', 1)
+        return redirect('admin:api_backuprestore_changelist')
 
     try:
         # Save uploaded file temporarily
@@ -96,4 +96,4 @@ def import_portfolio_view(request):
     except Exception as e:
         messages.error(request, f'❌ Import failed: {str(e)}')
 
-    return redirect('admin:api_homedata_change', 1)
+    return redirect('admin:api_backuprestore_changelist')
