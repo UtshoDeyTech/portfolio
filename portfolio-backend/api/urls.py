@@ -48,6 +48,9 @@ urlpatterns = [
     path('blog-posts/<slug:slug>/comments/', views.BlogCommentCreateAPIView.as_view(), name='blog-comment-create'),
     path('blog-posts/<slug:slug>/comments/list/', views.BlogCommentsListAPIView.as_view(), name='blog-comments-list'),
 
+    # Newsletter
+    path('newsletter/subscribe/', views.NewsletterSubscribeView.as_view(), name='newsletter-subscribe'),
+
     # Media Files (API endpoints for listing/details)
     path('media-files/', views.MediaFileListView.as_view(), name='media-file-list'),
     path('media-files/<slug:slug>/', views.MediaFileDetailView.as_view(), name='media-file-detail'),

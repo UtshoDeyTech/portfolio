@@ -16,6 +16,7 @@ from .models import (
     BlogLike,
     MediaFile,
     BackupRestore,
+    NewsletterSubscriber,
 )
 
 
@@ -662,3 +663,44 @@ class BackupRestoreAdmin(admin.ModelAdmin):
         })
 
         return render(request, self.change_list_template, extra_context)
+
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    list_display = ('email', 'is_active', 'confirmed', 'subscribed_at', 'ip_address')
+    list_filter = ('is_active', 'confirmed', 'subscribed_at')
+    search_fields = ('email', 'ip_address')
+    readonly_fields = ('subscribed_at', 'unsubscribed_at', 'ip_address', 'user_agent')
+    ordering = ('-subscribed_at',)
+
+    fieldsets = (
+        ('Subscriber Information', {
+            'fields': ('email', 'is_active', 'confirmed')
+        }),
+        ('Subscription Details', {
+            'fields': ('subscribed_at', 'unsubscribed_at', 'ip_address', 'user_agent'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    actions = ['activate_subscribers', 'deactivate_subscribers', 'export_emails']
+
+    def activate_subscribers(self, request, queryset):
+        updated = queryset.update(is_active=True, unsubscribed_at=None)
+        self.message_user(request, f'{updated} subscriber(s) activated.')
+    activate_subscribers.short_description = "Activate selected subscribers"
+
+    def deactivate_subscribers(self, request, queryset):
+        from django.utils import timezone
+        updated = 0
+        for subscriber in queryset:
+            subscriber.unsubscribe()
+            updated += 1
+        self.message_user(request, f'{updated} subscriber(s) deactivated.')
+    deactivate_subscribers.short_description = "Deactivate selected subscribers"
+
+    def export_emails(self, request, queryset):
+        emails = list(queryset.filter(is_active=True).values_list('email', flat=True))
+        emails_text = ', '.join(emails)
+        self.message_user(request, f'Active emails ({len(emails)}): {emails_text}')
+    export_emails.short_description = "Export active email addresses"

@@ -504,3 +504,39 @@ class MediaFile(models.Model):
                 return f"{size:.1f} {unit}"
             size /= 1024.0
         return f"{size:.1f} PB"
+
+
+class NewsletterSubscriber(models.Model):
+    """
+    Newsletter subscription model to store email addresses.
+    Users can subscribe to receive updates about new blog posts and content.
+    """
+    email = models.EmailField(unique=True, db_index=True, help_text="Subscriber email address")
+    subscribed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    is_active = models.BooleanField(default=True, help_text="Whether subscription is active")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, help_text="IP address at subscription time")
+    user_agent = models.TextField(blank=True, help_text="Browser user agent at subscription time")
+
+    # Optional fields for future email campaigns
+    confirmed = models.BooleanField(default=False, help_text="Email confirmed via verification link")
+    unsubscribed_at = models.DateTimeField(null=True, blank=True, help_text="When user unsubscribed")
+
+    class Meta:
+        ordering = ['-subscribed_at']
+        verbose_name = "Newsletter Subscriber"
+        verbose_name_plural = "Newsletter Subscribers"
+        indexes = [
+            models.Index(fields=['email', 'is_active']),
+            models.Index(fields=['-subscribed_at']),
+        ]
+
+    def __str__(self):
+        status = "✓ Active" if self.is_active else "✗ Inactive"
+        return f"{self.email} - {status}"
+
+    def unsubscribe(self):
+        """Mark subscriber as inactive."""
+        self.is_active = False
+        from django.utils import timezone
+        self.unsubscribed_at = timezone.now()
+        self.save()

@@ -23,6 +23,7 @@ from .models import (
     BlogView,
     BlogLike,
     MediaFile,
+    NewsletterSubscriber,
 )
 from .serializers import (
     EducationEntrySerializer,
@@ -38,6 +39,7 @@ from .serializers import (
     BlogsDataSerializer,
     MediaFileSerializer,
     MediaFileListSerializer,
+    NewsletterSubscriberSerializer,
 )
 
 
@@ -677,3 +679,59 @@ class ServeMediaFileView(APIView):
 
         except Exception as e:
             raise Http404(f"Error serving file: {str(e)}")
+
+
+class NewsletterSubscribeView(APIView):
+    """
+    Subscribe to newsletter.
+    POST /api/newsletter/subscribe/
+
+    Request body:
+    {
+        "email": "user@example.com"
+    }
+
+    Response:
+    {
+        "success": true,
+        "message": "Successfully subscribed to newsletter"
+    }
+    """
+    def post(self, request):
+        serializer = NewsletterSubscriberSerializer(data=request.data)
+
+        if serializer.is_valid():
+            # Get client IP and user agent
+            ip_address = self.get_client_ip(request)
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+            # Save subscription with metadata
+            subscriber = serializer.save(
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+
+            return Response({
+                'success': True,
+                'message': 'Successfully subscribed to newsletter! Check your email for confirmation.'
+            }, status=http_status.HTTP_201_CREATED)
+
+        # Handle validation errors (duplicate email, invalid format, etc.)
+        error_message = 'Unable to subscribe'
+        if 'email' in serializer.errors:
+            error_message = serializer.errors['email'][0]
+
+        return Response({
+            'success': False,
+            'message': error_message
+        }, status=http_status.HTTP_400_BAD_REQUEST)
+
+    @staticmethod
+    def get_client_ip(request):
+        """Extract client IP address from request."""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip

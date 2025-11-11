@@ -11,6 +11,7 @@ from .models import (
     BlogComment,
     BlogsData,
     MediaFile,
+    NewsletterSubscriber,
 )
 
 
@@ -333,3 +334,19 @@ class MediaFileListSerializer(serializers.ModelSerializer):
 
     def get_file_extension(self, obj):
         return obj.get_file_extension()
+
+
+class NewsletterSubscriberSerializer(serializers.ModelSerializer):
+    """
+    Serializer for newsletter subscription.
+    Only exposes email field for public use.
+    """
+    class Meta:
+        model = NewsletterSubscriber
+        fields = ['email']
+
+    def validate_email(self, value):
+        """Ensure email is valid and not already subscribed."""
+        if NewsletterSubscriber.objects.filter(email=value, is_active=True).exists():
+            raise serializers.ValidationError("This email is already subscribed to our newsletter.")
+        return value.lower()  # Store emails in lowercase

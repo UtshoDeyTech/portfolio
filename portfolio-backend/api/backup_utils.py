@@ -1,6 +1,7 @@
 """
 Backup and Restore Utilities for Portfolio Data
 Handles export/import of all portfolio data including JSON, markdown files, and media.
+Auto-detects all models in the 'api' app for export/import.
 """
 
 import os
@@ -12,6 +13,68 @@ from pathlib import Path
 from django.core import serializers
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.apps import apps
+
+
+def get_exportable_models():
+    """
+    Auto-detect all models in the 'api' app that should be exported.
+    Returns a list of tuples: (json_filename, Model, priority)
+
+    Priority determines import/export order:
+    - Lower priority = exported/imported first
+    - Higher priority = exported/imported last
+
+    Models with foreign keys should have higher priority to be deleted first
+    and imported last.
+    """
+    api_config = apps.get_app_config('api')
+    models = []
+
+    # Define manual priorities for models with known dependencies
+    # Higher priority = more dependencies (should be deleted first, imported last)
+    priority_map = {
+        'BlogComment': 100,  # Has FK to Blog
+        'BlogView': 100,     # Has FK to Blog
+        'BlogLike': 100,     # Has FK to Blog
+        'Blog': 50,          # Referenced by BlogComment, BlogView, BlogLike
+        'MediaFile': 30,
+        'Project': 30,
+        'ResearchPublication': 30,
+        'ExperienceEntry': 30,
+        'EducationEntry': 30,
+        'ResearchIcon': 20,
+        'BlogSettings': 20,
+        'BlogsData': 20,
+        'HomeData': 10,      # Singleton, usually independent
+        'NewsletterSubscriber': 10,  # Independent
+    }
+
+    for model in api_config.get_models():
+        # Skip proxy models and models that shouldn't be exported
+        if model._meta.proxy or not model._meta.managed:
+            continue
+
+        model_name = model.__name__
+
+        # Skip system/internal models if any
+        if model_name.startswith('_'):
+            continue
+
+        # Get priority (default to 25 if not specified)
+        priority = priority_map.get(model_name, 25)
+
+        # Create filename from model name
+        # Convert CamelCase to snake_case
+        filename = ''.join(['_' + c.lower() if c.isupper() else c for c in model_name]).lstrip('_')
+
+        models.append((filename, model, priority))
+
+    # Sort by priority (ascending) for export order
+    # Lower priority models are exported first
+    models.sort(key=lambda x: x[2])
+
+    return models
 
 
 def export_portfolio_data(export_dir=None):
@@ -19,12 +82,9 @@ def export_portfolio_data(export_dir=None):
     Export all portfolio data to a directory structure.
     Returns the path to the created zip file.
     Raises exceptions with detailed messages if export fails.
+    Auto-detects all models in the 'api' app for export.
     """
-    from .models import (
-        EducationEntry, ExperienceEntry, Project, ResearchPublication,
-        ResearchIcon, HomeData, Blog, BlogComment, BlogsData,
-        BlogSettings, MediaFile
-    )
+    from .models import Blog
 
     try:
         # Create export directory
@@ -38,32 +98,21 @@ def export_portfolio_data(export_dir=None):
     except Exception as e:
         raise Exception(f"Failed to create export directory: {type(e).__name__}: {str(e)}")
 
+    # Get all exportable models (auto-detected)
+    models_to_export = get_exportable_models()
+
     # 1. Export all models as JSON
     try:
         json_dir = export_dir / 'json_data'
         json_dir.mkdir(exist_ok=True)
 
-        models_to_export = [
-            ('education', EducationEntry),
-            ('experience', ExperienceEntry),
-            ('projects', Project),
-            ('research', ResearchPublication),
-            ('research_icons', ResearchIcon),
-            ('home_data', HomeData),
-            ('blogs', Blog),
-            ('blog_comments', BlogComment),
-            ('blogs_data', BlogsData),
-            ('blog_settings', BlogSettings),
-            ('media_files', MediaFile),
-        ]
-
-        for name, model in models_to_export:
+        for filename, model, priority in models_to_export:
             try:
                 data = serializers.serialize('json', model.objects.all(), indent=2)
-                with open(json_dir / f'{name}.json', 'w', encoding='utf-8') as f:
+                with open(json_dir / f'{filename}.json', 'w', encoding='utf-8') as f:
                     f.write(data)
             except Exception as e:
-                raise Exception(f"Failed to export {name}: {type(e).__name__}: {str(e)}")
+                raise Exception(f"Failed to export {filename}: {type(e).__name__}: {str(e)}")
     except Exception as e:
         raise Exception(f"Failed to export JSON data: {str(e)}")
 
@@ -115,45 +164,41 @@ cover_image: {blog.cover_image}
                 shutil.copy2(item, dest_path)
 
     # 4. Create a manifest file with metadata
+    model_counts = {}
+    for filename, model, priority in models_to_export:
+        model_counts[model.__name__] = model.objects.count()
+
     manifest = {
         'export_date': datetime.now().isoformat(),
         'django_version': '5.2.8',  # Update as needed
-        'models_exported': [name for name, _ in models_to_export],
-        'total_blogs': Blog.objects.count(),
-        'total_media_files': MediaFile.objects.count(),
-        'total_education_entries': EducationEntry.objects.count(),
-        'total_experience_entries': ExperienceEntry.objects.count(),
-        'total_projects': Project.objects.count(),
-        'total_research_publications': ResearchPublication.objects.count(),
+        'models_exported': [filename for filename, _, _ in models_to_export],
+        'model_counts': model_counts,
     }
 
     with open(export_dir / 'manifest.json', 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2)
 
     # 5. Create README
+    models_list = '\n'.join([f"- {model.__name__}: {model.objects.count()}"
+                             for _, model, _ in models_to_export])
+
     readme_content = f"""# Portfolio Data Backup
 Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ## Contents:
 - json_data/: All database models exported as JSON
-- blogs_markdown/: Blog posts in Markdown format
+- blogs_markdown/: Blog posts in Markdown format (if any)
 - media_files/: All uploaded media files (images, documents, etc.)
 - manifest.json: Backup metadata
 
 ## To Restore:
 1. Upload this zip file to your Django admin panel
-2. Go to: /admin/portfolio-import/
-3. Select the zip file and click "Import"
+2. Go to: /admin/api/backuprestore/
+3. Select the zip file and click "Import Data"
 4. All data will be restored to the database
 
 ## Models Included:
-- Education Entries: {EducationEntry.objects.count()}
-- Experience Entries: {ExperienceEntry.objects.count()}
-- Projects: {Project.objects.count()}
-- Research Publications: {ResearchPublication.objects.count()}
-- Blog Posts: {Blog.objects.count()}
-- Media Files: {MediaFile.objects.count()}
-- Home Page Data: {HomeData.objects.count()}
+{models_list}
 
 WARNING: Importing will overwrite existing data!
 """
@@ -179,6 +224,7 @@ WARNING: Importing will overwrite existing data!
 def import_portfolio_data(zip_path, overwrite=False):
     """
     Import portfolio data from a backup zip file.
+    Auto-detects all models from the exported data.
 
     Args:
         zip_path: Path to the backup zip file
@@ -187,12 +233,10 @@ def import_portfolio_data(zip_path, overwrite=False):
     Returns:
         dict: Import results with counts and status
     """
-    from .models import (
-        EducationEntry, ExperienceEntry, Project, ResearchPublication,
-        ResearchIcon, HomeData, Blog, BlogComment, BlogsData,
-        BlogSettings, MediaFile
-    )
     from django.core import serializers as django_serializers
+
+    # Get all exportable models (auto-detected)
+    models_info = get_exportable_models()
 
     # Extract zip to temporary directory
     import_dir = Path(settings.BASE_DIR) / 'temp_import'
@@ -219,43 +263,27 @@ def import_portfolio_data(zip_path, overwrite=False):
 
         # Clear existing data if overwrite is True
         if overwrite:
-            models_to_clear = [
-                BlogComment,  # Delete first (has FK to Blog)
-                Blog,
-                BlogsData,
-                BlogSettings,
-                MediaFile,
-                Project,
-                ResearchPublication,
-                ResearchIcon,
-                ExperienceEntry,
-                EducationEntry,
-                HomeData,  # Singleton, delete last
-            ]
-            for model in models_to_clear:
-                count = model.objects.count()
-                model.objects.all().delete()
-                results['imported'][f'{model.__name__}_deleted'] = count
+            # Delete in reverse priority order (highest priority first)
+            # This ensures models with FKs are deleted before their references
+            models_to_clear = sorted(models_info, key=lambda x: x[2], reverse=True)
+
+            for filename, model, priority in models_to_clear:
+                try:
+                    count = model.objects.count()
+                    model.objects.all().delete()
+                    results['imported'][f'{model.__name__}_deleted'] = count
+                except Exception as e:
+                    results['errors'].append(f"Error deleting {model.__name__}: {str(e)}")
 
         # Import JSON data
         json_dir = import_dir / 'json_data'
         if json_dir.exists():
-            json_files = [
-                ('education.json', EducationEntry),
-                ('experience.json', ExperienceEntry),
-                ('projects.json', Project),
-                ('research.json', ResearchPublication),
-                ('research_icons.json', ResearchIcon),
-                ('home_data.json', HomeData),
-                ('blog_settings.json', BlogSettings),
-                ('blogs_data.json', BlogsData),
-                ('blogs.json', Blog),
-                ('blog_comments.json', BlogComment),
-                ('media_files.json', MediaFile),
-            ]
+            # Import in normal priority order (lowest priority first)
+            # This ensures independent models are imported before dependent ones
+            for filename, model, priority in models_info:
+                json_filename = f'{filename}.json'
+                filepath = json_dir / json_filename
 
-            for filename, model in json_files:
-                filepath = json_dir / filename
                 if filepath.exists():
                     try:
                         with open(filepath, 'r', encoding='utf-8') as f:
@@ -265,11 +293,11 @@ def import_portfolio_data(zip_path, overwrite=False):
                             for obj in objects:
                                 obj.save()
                                 count += 1
-                            results['imported'][filename] = count
+                            results['imported'][json_filename] = count
                     except Exception as e:
-                        error_msg = f"Error importing {filename}: {type(e).__name__}: {str(e)}"
+                        error_msg = f"Error importing {json_filename}: {type(e).__name__}: {str(e)}"
                         results['errors'].append(error_msg)
-                        results['imported'][filename] = 0
+                        results['imported'][json_filename] = 0
 
         # Restore media files
         media_dir = import_dir / 'media_files'
