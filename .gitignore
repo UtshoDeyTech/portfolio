@@ -68,3 +68,9 @@ db.sqlite3-journal
 
 # Docker
 docker-compose.override.yml
+
+# Deployment & Production
+nginx/ssl/
+backups/
+*.sqlite3
+staticfiles/
