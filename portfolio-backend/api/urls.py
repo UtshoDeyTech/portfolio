@@ -3,6 +3,7 @@ from . import views
 from . import admin_views
 
 urlpatterns = [
+    path('health/', views.HealthCheckView.as_view(), name='health-check'),
     path('', views.IndexView.as_view(), name='api-index'),
 
     # Admin Import/Export Views (simple buttons)

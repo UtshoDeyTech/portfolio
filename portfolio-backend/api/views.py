@@ -43,6 +43,13 @@ from .serializers import (
 )
 
 
+class HealthCheckView(APIView):
+    """Health check endpoint for container orchestration."""
+
+    def get(self, request):
+        return Response({'status': 'healthy'}, status=http_status.HTTP_200_OK)
+
+
 class IndexView(APIView):
     """Return available endpoints / keys."""
 
