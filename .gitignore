@@ -41,6 +41,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# But allow frontend lib directory
+!portfolio-frontend/src/lib/
 parts/
 sdist/
 var/
