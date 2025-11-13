@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AWS EC2 Deployment Script for Portfolio Application
-# This script sets up and deploys the portfolio application using Docker on AWS EC2
+# Compatible with both Ubuntu and Amazon Linux
 
 set -e  # Exit on error
 
@@ -32,36 +32,70 @@ fi
 
 print_info "Starting AWS EC2 deployment setup..."
 
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+    print_info "Detected OS: $PRETTY_NAME"
+else
+    print_error "Cannot detect operating system"
+    exit 1
+fi
+
 # 1. Update system packages
 print_info "Updating system packages..."
-sudo apt-get update
-sudo apt-get upgrade -y
+if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+    sudo apt-get update
+    sudo apt-get upgrade -y
+elif [ "$OS" = "amzn" ] || [ "$OS" = "rhel" ] || [ "$OS" = "centos" ]; then
+    sudo yum update -y
+else
+    print_error "Unsupported OS: $OS"
+    exit 1
+fi
 print_success "System packages updated"
 
 # 2. Install Docker
 if ! command -v docker &> /dev/null; then
     print_info "Installing Docker..."
-    sudo apt-get install -y \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release
 
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+        sudo apt-get install -y \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release
 
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    elif [ "$OS" = "amzn" ]; then
+        # Amazon Linux 2 or 2023
+        sudo yum install -y docker
+        sudo systemctl enable docker
+        sudo systemctl start docker
+    fi
 
     # Add current user to docker group
     sudo usermod -aG docker $USER
     print_success "Docker installed"
+    print_info "NOTE: You may need to log out and back in for docker group permissions to take effect"
 else
     print_success "Docker already installed"
+fi
+
+# Start docker if not running
+if ! sudo systemctl is-active --quiet docker; then
+    print_info "Starting Docker service..."
+    sudo systemctl start docker
+    print_success "Docker service started"
 fi
 
 # 3. Install Docker Compose (standalone)
@@ -69,10 +103,19 @@ if ! command -v docker-compose &> /dev/null; then
     print_info "Installing Docker Compose..."
     sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     sudo chmod +x /usr/local/bin/docker-compose
+
+    # Create symlink for compatibility
+    sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
     print_success "Docker Compose installed"
 else
     print_success "Docker Compose already installed"
 fi
+
+# Verify installations
+print_info "Verifying installations..."
+docker --version
+docker-compose --version
 
 # 4. Setup environment file
 if [ ! -f .env.production ]; then
@@ -94,8 +137,14 @@ if [ ! -f .env.production ]; then
     fi
 
     # Generate Django secret key
-    DJANGO_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')
-    sed -i "s/CHANGE_THIS_TO_A_RANDOM_SECRET_KEY_IN_PRODUCTION/$DJANGO_SECRET_KEY/g" .env.production
+    if command -v python3 &> /dev/null; then
+        DJANGO_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')
+        sed -i "s/CHANGE_THIS_TO_A_RANDOM_SECRET_KEY_IN_PRODUCTION/$DJANGO_SECRET_KEY/g" .env.production
+    else
+        print_info "Python3 not found, using fallback random key generation"
+        DJANGO_SECRET_KEY=$(openssl rand -base64 50 | tr -d "=+/" | cut -c1-50)
+        sed -i "s/CHANGE_THIS_TO_A_RANDOM_SECRET_KEY_IN_PRODUCTION/$DJANGO_SECRET_KEY/g" .env.production
+    fi
 
     print_success "Environment file created at .env.production"
     print_info "Please review and update .env.production with your specific configuration"
@@ -110,14 +159,27 @@ mkdir -p portfolio-backend/staticfiles
 mkdir -p portfolio-backend/media
 print_success "Directories created"
 
-# 6. Configure firewall (if UFW is available)
-if command -v ufw &> /dev/null; then
-    print_info "Configuring firewall..."
+# 6. Configure firewall
+if command -v firewall-cmd &> /dev/null; then
+    # For Amazon Linux / RHEL (firewalld)
+    print_info "Configuring firewall (firewalld)..."
+    sudo systemctl start firewalld || true
+    sudo systemctl enable firewalld || true
+    sudo firewall-cmd --permanent --add-service=ssh || true
+    sudo firewall-cmd --permanent --add-service=http || true
+    sudo firewall-cmd --permanent --add-service=https || true
+    sudo firewall-cmd --reload || true
+    print_success "Firewall configured"
+elif command -v ufw &> /dev/null; then
+    # For Ubuntu (ufw)
+    print_info "Configuring firewall (ufw)..."
     sudo ufw allow 22/tcp   # SSH
     sudo ufw allow 80/tcp   # HTTP
     sudo ufw allow 443/tcp  # HTTPS
     sudo ufw --force enable
     print_success "Firewall configured"
+else
+    print_info "No firewall detected, skipping firewall configuration"
 fi
 
 # 7. Create systemd service for auto-start
@@ -145,26 +207,48 @@ sudo systemctl enable portfolio.service
 print_success "Systemd service created and enabled"
 
 # 8. Build and start containers
-print_info "Building Docker images (this may take a few minutes)..."
-docker-compose -f docker-compose.prod.yml --env-file .env.production build
+print_info "Building Docker images (this may take several minutes)..."
+print_info "If you see permission errors, you may need to log out and back in, then run:"
+print_info "docker-compose -f docker-compose.prod.yml --env-file .env.production build"
+
+# Try with current user first, fall back to sudo if needed
+if docker ps &> /dev/null; then
+    docker-compose -f docker-compose.prod.yml --env-file .env.production build
+else
+    print_info "Using sudo for docker commands (you may need to log out and back in to use docker without sudo)"
+    sudo docker-compose -f docker-compose.prod.yml --env-file .env.production build
+fi
 
 print_info "Starting containers..."
-docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+if docker ps &> /dev/null; then
+    docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+else
+    sudo docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+fi
 
 print_success "Containers started successfully"
 
 # 9. Wait for services to be healthy
 print_info "Waiting for services to become healthy..."
-sleep 10
+sleep 15
 
 # 10. Create Django superuser (interactive)
 print_info "Creating Django superuser..."
 print_info "You will be prompted to create an admin user for the Django admin panel"
-docker-compose -f docker-compose.prod.yml --env-file .env.production exec backend python manage.py createsuperuser || print_info "Skipping superuser creation (you can create it later)"
+
+if docker ps &> /dev/null; then
+    docker-compose -f docker-compose.prod.yml --env-file .env.production exec backend python manage.py createsuperuser || print_info "Skipping superuser creation (you can create it later with: docker-compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser)"
+else
+    sudo docker-compose -f docker-compose.prod.yml --env-file .env.production exec backend python manage.py createsuperuser || print_info "Skipping superuser creation (you can create it later)"
+fi
 
 # 11. Display status
 print_info "Checking container status..."
-docker-compose -f docker-compose.prod.yml --env-file .env.production ps
+if docker ps &> /dev/null; then
+    docker-compose -f docker-compose.prod.yml --env-file .env.production ps
+else
+    sudo docker ps
+fi
 
 echo ""
 print_success "========================================="
@@ -189,6 +273,10 @@ echo "  View logs: docker-compose -f docker-compose.prod.yml logs -f"
 echo "  Stop services: docker-compose -f docker-compose.prod.yml down"
 echo "  Restart services: docker-compose -f docker-compose.prod.yml restart"
 echo "  View status: docker-compose -f docker-compose.prod.yml ps"
+echo ""
+print_info "If you see permission errors with docker commands, log out and back in:"
+echo "  exit"
+echo "  ssh -i your-key.pem ec2-user@$EC2_PUBLIC_IP"
 echo ""
 print_info "The application will automatically start on system reboot"
 echo ""
