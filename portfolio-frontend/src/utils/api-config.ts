@@ -15,11 +15,11 @@ export function getApiUrl(): string {
   const isServer = typeof window === 'undefined';
 
   if (isServer) {
-    // Server-side: Use Docker internal network URL
-    return import.meta.env.SERVER_API_URL || 'http://backend:8000';
+    // Server-side: Use environment variable or fallback to localhost
+    return import.meta.env.SERVER_API_URL || 'http://127.0.0.1:8000';
   } else {
-    // Client-side: Use public URL accessible from browser
-    return import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
+    // Client-side: Use public URL accessible from browser (can be relative URL for nginx proxy)
+    return import.meta.env.PUBLIC_API_URL || '';
   }
 }
 
@@ -29,7 +29,14 @@ export function getApiUrl(): string {
  */
 export async function apiFetch(endpoint: string, options?: RequestInit): Promise<Response> {
   const baseUrl = getApiUrl();
-  const url = endpoint.startsWith('/') ? `${baseUrl}${endpoint}` : `${baseUrl}/${endpoint}`;
 
+  // Handle relative baseUrl (for nginx proxy)
+  if (!baseUrl || baseUrl === '/') {
+    const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    return fetch(url, options);
+  }
+
+  // Handle absolute baseUrl
+  const url = endpoint.startsWith('/') ? `${baseUrl}${endpoint}` : `${baseUrl}/${endpoint}`;
   return fetch(url, options);
 }

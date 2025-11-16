@@ -170,6 +170,25 @@ echo "=========================================="
 
 cd "$SCRIPT_DIR/portfolio-frontend"
 
+# Create .env file for frontend if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo "Creating frontend .env file..."
+    cat > .env << EOF
+# API Configuration for production deployment
+
+# Server-side API URL (used during build on EC2)
+# Points to local backend service
+SERVER_API_URL=http://127.0.0.1:8000
+
+# Public API URL (used by browser/client-side)
+# Uses relative URL so nginx proxy handles the routing
+PUBLIC_API_URL=/
+EOF
+    echo -e "${GREEN}✓ Frontend .env file created${NC}"
+else
+    echo "Frontend .env file already exists"
+fi
+
 echo "Installing npm dependencies..."
 npm install
 
