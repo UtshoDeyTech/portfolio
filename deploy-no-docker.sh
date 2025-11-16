@@ -122,7 +122,7 @@ echo ""
 echo "Step 4: Setting up Backend (Django)"
 echo "=========================================="
 
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/portfolio-backend"
 
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
@@ -162,6 +162,8 @@ python manage.py collectstatic --noinput
 
 deactivate
 
+cd "$SCRIPT_DIR"
+
 echo ""
 echo "Step 5: Building Frontend (Astro)"
 echo "=========================================="
@@ -187,9 +189,9 @@ After=network.target
 [Service]
 Type=simple
 User=$USER
-WorkingDirectory=$SCRIPT_DIR
-Environment="PATH=$SCRIPT_DIR/venv/bin"
-ExecStart=$SCRIPT_DIR/venv/bin/gunicorn portfolio_backend.wsgi:application --bind 127.0.0.1:8000 --workers 3
+WorkingDirectory=$SCRIPT_DIR/portfolio-backend
+Environment="PATH=$SCRIPT_DIR/portfolio-backend/venv/bin"
+ExecStart=$SCRIPT_DIR/portfolio-backend/venv/bin/gunicorn portfolio_backend.wsgi:application --bind 127.0.0.1:8000 --workers 3
 Restart=always
 RestartSec=10
 
@@ -198,9 +200,11 @@ WantedBy=multi-user.target
 EOF
 
 # Install gunicorn if not already installed
+cd "$SCRIPT_DIR/portfolio-backend"
 source venv/bin/activate
 pip install gunicorn
 deactivate
+cd "$SCRIPT_DIR"
 
 # Create Astro frontend service
 sudo tee /etc/systemd/system/portfolio-frontend.service > /dev/null << EOF
@@ -279,14 +283,14 @@ server {
 
     # Django static files
     location /static/ {
-        alias $SCRIPT_DIR/static/;
+        alias $SCRIPT_DIR/portfolio-backend/static/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
 
     # Django media files
     location /media/ {
-        alias $SCRIPT_DIR/media/;
+        alias $SCRIPT_DIR/portfolio-backend/media/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
