@@ -41,9 +41,21 @@ PROJECT_DIR=$(pwd)
 echo -e "${GREEN}Step 1: Detecting EC2 Instance Information${NC}"
 echo "=========================================="
 
-# Detect EC2 public IP
-EC2_PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "")
-EC2_PUBLIC_DNS=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname || echo "")
+# Detect EC2 public IP - Try IMDSv2 first (more secure), then fall back to IMDSv1
+echo "Attempting to detect EC2 metadata..."
+
+# Try IMDSv2 (with token)
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" --max-time 2 2>/dev/null || echo "")
+if [ -n "$TOKEN" ]; then
+    echo "Using IMDSv2 (token-based) for metadata..."
+    EC2_PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4 --max-time 2 2>/dev/null || echo "")
+    EC2_PUBLIC_DNS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-hostname --max-time 2 2>/dev/null || echo "")
+else
+    # Fall back to IMDSv1 (no token)
+    echo "Trying IMDSv1 (legacy) for metadata..."
+    EC2_PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 --max-time 2 2>/dev/null || echo "")
+    EC2_PUBLIC_DNS=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname --max-time 2 2>/dev/null || echo "")
+fi
 
 if [ -z "$EC2_PUBLIC_IP" ]; then
     echo -e "${RED}Error: Could not detect EC2 public IP. Are you running on EC2?${NC}"
