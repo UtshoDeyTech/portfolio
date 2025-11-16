@@ -572,39 +572,39 @@ class MediaFileAdmin(admin.ModelAdmin):
         """Display the CDN URL with a copy button."""
         if obj.slug:
             url = obj.get_file_url()
-            full_url = f"http://localhost:8000{url}"  # Update this with your domain
+            # Use JavaScript to construct absolute URL and provide copy functionality
             return format_html(
-                '<input type="text" value="{}" readonly style="width: 400px; padding: 4px;" '
-                'onclick="this.select(); document.execCommand(\'copy\'); alert(\'URL copied!\');" /> '
-                '<br><small>Click to copy</small>',
-                full_url
+                '<div style="display: flex; gap: 8px; align-items: center;">'
+                '<input type="text" id="cdn_url_{}" readonly style="width: 400px; padding: 4px; font-family: monospace;" />'
+                '<button type="button" onclick="'
+                'var input = document.getElementById(\'cdn_url_{}\'); '
+                'navigator.clipboard.writeText(input.value).then(() => {{ '
+                'alert(\'✓ URL copied: \' + input.value); '
+                '}}).catch(() => {{ alert(\'Failed to copy URL\'); }});" '
+                'style="padding: 4px 12px; cursor: pointer; background: #417690; color: white; border: none; border-radius: 4px;">'
+                'Copy</button>'
+                '</div>'
+                '<script>document.getElementById("cdn_url_{}").value = window.location.protocol + "//" + window.location.host + "{}";</script>',
+                obj.id, obj.id, obj.id, url
             )
         return '-'
     cdn_url_display.short_description = "CDN URL"
 
     def api_url_display(self, obj):
-        """Display the API URL."""
-        if obj.slug:
-            url = obj.get_api_url()
-            full_url = f"http://localhost:8000{url}"  # Update this with your domain
-            return format_html(
-                '<input type="text" value="{}" readonly style="width: 400px; padding: 4px;" '
-                'onclick="this.select(); document.execCommand(\'copy\'); alert(\'URL copied!\');" /> '
-                '<br><small>Click to copy</small>',
-                full_url
-            )
-        return '-'
+        """Display the API URL (same as CDN URL for compatibility)."""
+        return self.cdn_url_display(obj)
     api_url_display.short_description = "API URL"
 
     def copy_url_button(self, obj):
         """Show a copy URL button in list view."""
         if obj.slug:
             url = obj.get_file_url()
-            full_url = f"http://localhost:8000{url}"
+            # Use JavaScript to construct absolute URL dynamically
             return format_html(
-                '<button onclick="navigator.clipboard.writeText(\'{}\'); alert(\'URL copied!\');" '
+                '<button onclick="var fullUrl = window.location.protocol + \'//\' + window.location.host + \'{}\'; '
+                'navigator.clipboard.writeText(fullUrl); alert(\'URL copied: \' + fullUrl);" '
                 'style="padding: 4px 8px; cursor: pointer;">Copy URL</button>',
-                full_url
+                url
             )
         return '-'
     copy_url_button.short_description = "Actions"

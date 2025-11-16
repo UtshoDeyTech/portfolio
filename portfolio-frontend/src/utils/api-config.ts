@@ -19,7 +19,16 @@ export function getApiUrl(): string {
     return import.meta.env.SERVER_API_URL || 'http://backend:8000';
   } else {
     // Client-side: Use public URL accessible from browser
-    return import.meta.env.PUBLIC_API_URL || 'http://localhost:8000';
+    // If PUBLIC_API_URL is set, use it; otherwise construct from current location
+    if (import.meta.env.PUBLIC_API_URL) {
+      return import.meta.env.PUBLIC_API_URL;
+    }
+
+    // Fallback: construct API URL from current browser location
+    // This ensures it works in any deployment environment
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    return `${protocol}//${host}`;
   }
 }
 

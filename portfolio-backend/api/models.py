@@ -483,9 +483,9 @@ class MediaFile(models.Model):
     def get_file_url(self):
         """
         Returns the custom URL for accessing this file.
-        Format: /cdn/{slug}
+        Format: /api/cdn/{slug}
         """
-        return f"/cdn/{self.slug}"
+        return f"/api/cdn/{self.slug}"
 
     def get_api_url(self):
         """
