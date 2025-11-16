@@ -149,8 +149,8 @@ DJANGO_SECRET_KEY=$(python3 -c 'import secrets; print("".join(secrets.choice("ab
 cat > "$PROJECT_DIR/.env" << EOF
 # Django Backend Configuration
 DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
-DEBUG=False
-ALLOWED_HOSTS=$DOMAIN,$EC2_PUBLIC_IP,localhost,127.0.0.1,backend
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=$DOMAIN,$EC2_PUBLIC_IP,localhost,127.0.0.1,backend
 
 # Database Configuration
 DB_ENGINE=django.db.backends.sqlite3
