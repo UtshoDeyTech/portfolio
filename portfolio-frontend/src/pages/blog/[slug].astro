@@ -583,7 +583,10 @@ const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1]
                 messageDiv.classList.add('hidden');
 
                 try {
-                    const response = await fetch('http://localhost:8000/api/newsletter/subscribe/', {
+                    // Construct API URL dynamically from current location
+                    const apiUrl = `${window.location.protocol}//${window.location.host}/api/newsletter/subscribe/`;
+
+                    const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
