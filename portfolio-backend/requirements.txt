@@ -4,3 +4,4 @@ drf-yasg>=1.21
 markdown>=3.5
 django-cors-headers>=4.3
 python-dotenv>=1.0.0
+gunicorn>=21.2.0
