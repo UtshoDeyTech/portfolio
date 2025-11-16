@@ -20,5 +20,7 @@ COPY temp_blog.json /app/
 # Expose port
 EXPOSE 8000
 
-# Run migrations and start server
-CMD python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+# Run migrations, collect static files, and start server with gunicorn
+CMD python manage.py migrate && \
+    python manage.py collectstatic --noinput && \
+    gunicorn portfolio_backend.wsgi:application --bind 0.0.0.0:8000 --workers 3
