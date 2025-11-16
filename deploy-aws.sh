@@ -41,9 +41,21 @@ PROJECT_DIR=$(pwd)
 echo -e "${GREEN}Step 1: Detecting EC2 Instance Information${NC}"
 echo "=========================================="
 
-# Detect EC2 public IP
-EC2_PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 || echo "")
-EC2_PUBLIC_DNS=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname || echo "")
+# Detect EC2 public IP - Try IMDSv2 first (more secure), then fall back to IMDSv1
+echo "Attempting to detect EC2 metadata..."
+
+# Try IMDSv2 (with token)
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" --max-time 2 2>/dev/null || echo "")
+if [ -n "$TOKEN" ]; then
+    echo "Using IMDSv2 (token-based) for metadata..."
+    EC2_PUBLIC_IP=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4 --max-time 2 2>/dev/null || echo "")
+    EC2_PUBLIC_DNS=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-hostname --max-time 2 2>/dev/null || echo "")
+else
+    # Fall back to IMDSv1 (no token)
+    echo "Trying IMDSv1 (legacy) for metadata..."
+    EC2_PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 --max-time 2 2>/dev/null || echo "")
+    EC2_PUBLIC_DNS=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname --max-time 2 2>/dev/null || echo "")
+fi
 
 if [ -z "$EC2_PUBLIC_IP" ]; then
     echo -e "${RED}Error: Could not detect EC2 public IP. Are you running on EC2?${NC}"
@@ -142,15 +154,15 @@ echo ""
 echo -e "${GREEN}Step 5: Creating Environment Configuration${NC}"
 echo "=========================================="
 
-# Generate Django secret key
-DJANGO_SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+# Generate Django secret key using Python's secrets module (no Django required)
+DJANGO_SECRET_KEY=$(python3 -c 'import secrets; print("".join(secrets.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)") for i in range(50)))')
 
 # Create .env file
 cat > "$PROJECT_DIR/.env" << EOF
 # Django Backend Configuration
 DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
-DEBUG=False
-ALLOWED_HOSTS=$DOMAIN,$EC2_PUBLIC_IP,localhost,127.0.0.1,backend
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=$DOMAIN,$EC2_PUBLIC_IP,localhost,127.0.0.1,backend
 
 # Database Configuration
 DB_ENGINE=django.db.backends.sqlite3
