@@ -88,52 +88,152 @@ const BLOGS_API = () => getApiEndpoint('/api/blogs/');
 const TRENDING_BLOGS_API = () => getApiEndpoint('/api/trending-blogs/');
 const FEATURED_BLOGS_API = () => getApiEndpoint('/api/featured-blogs/');
 
+export interface PaginatedBlogsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: BlogPost[];
+  totalPages?: number;
+  currentPage?: number;
+}
+
+interface FetchBlogPostsOptions {
+  page?: number;
+  pageSize?: number;
+  category?: string;
+  tag?: string;
+  search?: string;
+}
+
 /**
- * Fetch all blog posts from the API
+ * Fetch blog posts from the API with pagination support
  */
-export const fetchBlogPosts = async (): Promise<BlogPost[]> => {
+export const fetchBlogPosts = async (options: FetchBlogPostsOptions = {}): Promise<PaginatedBlogsResponse> => {
   try {
-    const res = await fetch(BLOG_POSTS_API());
+    const queryParams = new URLSearchParams();
+
+    if (options.page) queryParams.append('page', options.page.toString());
+    if (options.pageSize) queryParams.append('page_size', options.pageSize.toString());
+    if (options.category) queryParams.append('category', options.category);
+    if (options.tag) queryParams.append('tag', options.tag);
+    if (options.search) queryParams.append('search', options.search);
+
+    const url = queryParams.toString()
+      ? `${BLOG_POSTS_API()}?${queryParams.toString()}`
+      : BLOG_POSTS_API();
+
+    const res = await fetch(url);
     if (!res.ok) {
-      console.error(`Failed to fetch blog posts: ${res.status} ${res.statusText}`);
-      return [];
+      // Log error server-side only
+      if (typeof window === 'undefined') {
+        console.error(`Failed to fetch blog posts: ${res.status} ${res.statusText}`);
+      }
+      return {
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+        totalPages: 0,
+        currentPage: 1,
+      };
     }
     const data = await res.json();
-    if (!Array.isArray(data)) return [];
 
-    return data.map((item: any) => ({
-      id: item.id,
-      slug: item.slug,
-      title: item.title,
-      subtitle: item.subtitle,
-      excerpt: item.excerpt,
-      content_markdown: item.content_markdown,
-      content_html: item.content_html,
-      cover_image: item.cover_image,
-      featured_image: item.featured_image,
-      category: item.category,
-      tags: Array.isArray(item.tags) ? item.tags : [],
-      author: item.author,
-      published_date: item.published_date,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      views: item.views,
-      likes: item.likes,
-      comments_count: item.comments_count,
-      shares: item.shares,
-      is_published: item.is_published,
-      is_featured: item.is_featured,
-      is_trending: item.is_trending,
-      is_editor_choice: item.is_editor_choice,
-      allow_comments: item.allow_comments,
-      display_order: item.display_order,
-      read_time: item.read_time,
-      meta_description: item.meta_description,
-      meta_keywords: item.meta_keywords,
-    } as BlogPost));
+    // Handle paginated response
+    if (data.results && Array.isArray(data.results)) {
+      const pageSize = options.pageSize || 9;
+      const totalPages = Math.ceil(data.count / pageSize);
+      const currentPage = options.page || 1;
+
+      return {
+        count: data.count,
+        next: data.next,
+        previous: data.previous,
+        totalPages,
+        currentPage,
+        results: data.results.map((item: any) => ({
+          id: item.id,
+          slug: item.slug,
+          title: item.title,
+          subtitle: item.subtitle,
+          excerpt: item.excerpt,
+          content_markdown: item.content_markdown,
+          content_html: item.content_html,
+          cover_image: item.cover_image,
+          featured_image: item.featured_image,
+          category: item.category,
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          author: item.author,
+          published_date: item.published_date,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          views: item.views,
+          likes: item.likes,
+          comments_count: item.comments_count,
+          shares: item.shares,
+          is_published: item.is_published,
+          is_featured: item.is_featured,
+          is_trending: item.is_trending,
+          is_editor_choice: item.is_editor_choice,
+          allow_comments: item.allow_comments,
+          display_order: item.display_order,
+          read_time: item.read_time,
+          meta_description: item.meta_description,
+          meta_keywords: item.meta_keywords,
+        } as BlogPost)),
+      };
+    }
+
+    // Fallback for non-paginated response (old API format)
+    if (Array.isArray(data)) {
+      return {
+        count: data.length,
+        next: null,
+        previous: null,
+        results: data.map((item: any) => ({
+          id: item.id,
+          slug: item.slug,
+          title: item.title,
+          subtitle: item.subtitle,
+          excerpt: item.excerpt,
+          cover_image: item.cover_image,
+          category: item.category,
+          tags: Array.isArray(item.tags) ? item.tags : [],
+          author: item.author,
+          published_date: item.published_date,
+          views: item.views,
+          likes: item.likes,
+          comments_count: item.comments_count,
+          is_trending: item.is_trending,
+          is_featured: item.is_featured,
+          read_time: item.read_time,
+        } as BlogPost)),
+        totalPages: 1,
+        currentPage: 1,
+      };
+    }
+
+    return {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+      totalPages: 0,
+      currentPage: 1,
+    };
   } catch (err) {
-    console.error('Error fetching blog posts:', err);
-    return [];
+    // Log error server-side only, don't expose to client
+    if (typeof window === 'undefined') {
+      console.error('Error fetching blog posts:', err);
+    }
+    return {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+      totalPages: 0,
+      currentPage: 1,
+    };
   }
 };
 
@@ -144,7 +244,9 @@ export const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost | null
   try {
     const res = await fetch(`${BLOG_POSTS_API()}${slug}/`);
     if (!res.ok) {
-      console.error(`Failed to fetch blog post ${slug}: ${res.status} ${res.statusText}`);
+      if (typeof window === 'undefined') {
+        console.error(`Failed to fetch blog post ${slug}: ${res.status} ${res.statusText}`);
+      }
       return null;
     }
     const item = await res.json();
@@ -180,7 +282,10 @@ export const fetchBlogPostBySlug = async (slug: string): Promise<BlogPost | null
       meta_keywords: item.meta_keywords,
     } as BlogPost;
   } catch (err) {
-    console.error(`Error fetching blog post ${slug}:`, err);
+    // Log error server-side only, don't expose to client
+    if (typeof window === 'undefined') {
+      console.error(`Error fetching blog post ${slug}:`, err);
+    }
     return null;
   }
 };
@@ -192,7 +297,9 @@ export const fetchBlogMetadata = async (): Promise<Partial<BlogsData>> => {
   try {
     const res = await fetch(BLOGS_API());
     if (!res.ok) {
-      console.error(`Failed to fetch blog metadata: ${res.status} ${res.statusText}`);
+      if (typeof window === 'undefined') {
+        console.error(`Failed to fetch blog metadata: ${res.status} ${res.statusText}`);
+      }
       return {};
     }
     const data = await res.json();
@@ -202,7 +309,9 @@ export const fetchBlogMetadata = async (): Promise<Partial<BlogsData>> => {
       future_topics: Array.isArray(data.future_topics) ? data.future_topics : [],
     };
   } catch (err) {
-    console.error('Error fetching blog metadata:', err);
+    if (typeof window === 'undefined') {
+      console.error('Error fetching blog metadata:', err);
+    }
     return {};
   }
 };
@@ -236,7 +345,9 @@ export const fetchTrendingBlogs = async (): Promise<BlogPost[]> => {
       read_time: item.read_time,
     } as BlogPost));
   } catch (err) {
-    console.error('Error fetching trending blogs:', err);
+    if (typeof window === 'undefined') {
+      console.error('Error fetching trending blogs:', err);
+    }
     return [];
   }
 };
@@ -270,7 +381,9 @@ export const fetchFeaturedBlogs = async (): Promise<BlogPost[]> => {
       read_time: item.read_time,
     } as BlogPost));
   } catch (err) {
-    console.error('Error fetching featured blogs:', err);
+    if (typeof window === 'undefined') {
+      console.error('Error fetching featured blogs:', err);
+    }
     return [];
   }
 };
@@ -304,61 +417,60 @@ export const fetchBlogsByCategory = async (category: string): Promise<BlogPost[]
       read_time: item.read_time,
     } as BlogPost));
   } catch (err) {
-    console.error(`Error fetching blogs by category ${category}:`, err);
+    if (typeof window === 'undefined') {
+      console.error(`Error fetching blogs by category ${category}:`, err);
+    }
     return [];
   }
 };
 
 /**
- * Get all published blogs (async)
+ * Get all published blogs (async) - fetches without pagination
  */
 export const getPublishedBlogs = async (): Promise<BlogPost[]> => {
-  const posts = await fetchBlogPosts();
-  return posts.filter((blog) => blog.is_published !== false);
+  const response = await fetchBlogPosts({ pageSize: 100 }); // Fetch first 100
+  return response.results.filter((blog) => blog.is_published !== false);
 };
 
 /**
  * Get newest blogs (async)
  */
 export const getNewBlogs = async (limit: number = 5): Promise<BlogPost[]> => {
-  const posts = await getPublishedBlogs();
-  return posts
-    .sort((a, b) => {
-      const dateA = a.published_date || '0';
-      const dateB = b.published_date || '0';
-      return dateB.localeCompare(dateA);
-    })
+  const response = await fetchBlogPosts({ pageSize: limit });
+  return response.results
+    .filter((blog) => blog.is_published !== false)
     .slice(0, limit);
 };
 
 /**
- * Get paginated blogs (async)
+ * Get paginated blogs using backend pagination (async)
  */
-export const getPaginatedBlogs = async (page: number = 1, perPage?: number) => {
-  const postsPerPage = perPage || blogsData.metadata.posts_per_page;
-  const allBlogs = await getPublishedBlogs();
+export const getPaginatedBlogs = async (
+  page: number = 1,
+  perPage?: number,
+  options: {
+    category?: string;
+    tag?: string;
+    search?: string;
+  } = {}
+) => {
+  const postsPerPage = perPage || blogsData.metadata.posts_per_page || 9;
 
-  const sortedBlogs = allBlogs.sort((a, b) => {
-    if (a.display_order !== b.display_order) {
-      return (a.display_order || 999) - (b.display_order || 999);
-    }
-    const dateA = a.published_date || '0';
-    const dateB = b.published_date || '0';
-    return dateB.localeCompare(dateA);
+  const response = await fetchBlogPosts({
+    page,
+    pageSize: postsPerPage,
+    category: options.category,
+    tag: options.tag,
+    search: options.search,
   });
 
-  const totalPages = Math.ceil(sortedBlogs.length / postsPerPage);
-  const startIndex = (page - 1) * postsPerPage;
-  const endIndex = startIndex + postsPerPage;
-  const blogs = sortedBlogs.slice(startIndex, endIndex);
-
   return {
-    blogs,
-    currentPage: page,
-    totalPages,
-    totalPosts: sortedBlogs.length,
-    hasNextPage: page < totalPages,
-    hasPrevPage: page > 1,
+    blogs: response.results,
+    currentPage: response.currentPage || page,
+    totalPages: response.totalPages || 0,
+    totalPosts: response.count,
+    hasNextPage: !!response.next,
+    hasPrevPage: !!response.previous,
   };
 };
 

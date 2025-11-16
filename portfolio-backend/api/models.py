@@ -297,6 +297,10 @@ class BlogSettings(models.Model):
         default=120,
         help_text="How long before considering user inactive (in seconds). Default: 120 (2 minutes)"
     )
+    default_page_size = models.IntegerField(
+        default=10,
+        help_text="Default number of blog posts to show per page. Default: 10"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

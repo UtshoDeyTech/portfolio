@@ -13,4 +13,12 @@ export default defineConfig({
     integrations: [react(), tailwind(), sitemap()],
     site: template.website_url,
     base: template.base,
+    vite: {
+        server: {
+            watch: {
+                usePolling: true,
+                interval: 1000,
+            },
+        },
+    },
 });

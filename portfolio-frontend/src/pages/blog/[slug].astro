@@ -5,9 +5,9 @@ import BlogInteractions from '@/components/react/BlogInteractions'
 import CommentSection from '@/components/react/CommentSection'
 
 export async function getStaticPaths() {
-    const blogPosts = await fetchBlogPosts();
+    const response = await fetchBlogPosts({ pageSize: 100 });
 
-    return blogPosts
+    return response.results
         .filter(post => post.is_published !== false && post.slug)
         .map(post => ({
             params: { slug: post.slug! },
@@ -162,11 +162,11 @@ const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1]
 
             <!-- Featured Image (if exists) -->
             {cover_image && (
-                <figure class="mb-10 -mx-4 sm:-mx-6 md:mx-0">
+                <figure class="mb-6 sm:mb-8 md:mb-10 overflow-hidden rounded-lg md:rounded-xl shadow-lg">
                     <img
                         src={cover_image}
                         alt={title}
-                        class="w-full rounded-none md:rounded-xl shadow-lg"
+                        class="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover"
                     />
                 </figure>
             )}

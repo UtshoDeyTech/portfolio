@@ -1,6 +1,7 @@
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.http import FileResponse, Http404
@@ -41,6 +42,15 @@ from .serializers import (
     MediaFileListSerializer,
     NewsletterSubscriberSerializer,
 )
+
+
+class BlogPagination(PageNumberPagination):
+    """
+    Custom pagination for blog posts.
+    """
+    page_size = 9  # Default number of posts per page
+    page_size_query_param = 'page_size'  # Allow client to set page size
+    max_page_size = 50  # Maximum allowed page size
 
 
 class IndexView(APIView):
@@ -123,13 +133,43 @@ class HomeDataView(generics.RetrieveAPIView):
 
 class BlogListView(generics.ListAPIView):
     """
-    List all published blogs.
+    List all published blogs with pagination.
     Uses lightweight serializer without full content.
+
+    Query parameters:
+    - page: Page number (default: 1)
+    - page_size: Number of items per page (default: 9, max: 50)
+    - category: Filter by category
+    - tag: Filter by tag
+    - search: Search in title, excerpt, and content
     """
     serializer_class = BlogListSerializer
+    pagination_class = BlogPagination
 
     def get_queryset(self):
-        return Blog.objects.filter(is_published=True).order_by('-published_date')
+        queryset = Blog.objects.filter(is_published=True)
+
+        # Filter by category
+        category = self.request.query_params.get('category', None)
+        if category:
+            queryset = queryset.filter(category=category)
+
+        # Filter by tag
+        tag = self.request.query_params.get('tag', None)
+        if tag:
+            queryset = queryset.filter(tags__contains=[tag])
+
+        # Search functionality
+        search = self.request.query_params.get('search', None)
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(excerpt__icontains=search) |
+                Q(content__icontains=search)
+            )
+
+        return queryset.order_by('-published_date')
 
 
 class BlogDetailView(generics.RetrieveAPIView):
@@ -197,13 +237,14 @@ class BlogsDataView(generics.RetrieveAPIView):
 class BlogSettingsView(APIView):
     """
     GET /api/blog-settings/
-    Returns blog configuration settings (duration update interval, etc.).
+    Returns blog configuration settings (duration update interval, default page size, etc.).
     """
     def get(self, request):
         settings = BlogSettings.get_settings()
         return Response({
             'duration_update_interval': settings.duration_update_interval,
             'inactivity_threshold': settings.inactivity_threshold,
+            'default_page_size': settings.default_page_size,
         }, status=http_status.HTTP_200_OK)
 
 
