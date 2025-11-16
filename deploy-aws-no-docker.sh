@@ -4,12 +4,13 @@
 # AWS EC2 Deployment Script (NO DOCKER) for Portfolio Project
 #
 # This script will:
-# 1. Install Python, Node.js, and system dependencies
-# 2. Set up Python virtual environment
-# 3. Install Django backend with Gunicorn
-# 4. Build Astro frontend static files
-# 5. Configure Nginx to serve both
-# 6. Set up systemd services for auto-start
+# 1. Stop Docker containers if running
+# 2. Install Python, Node.js, and system dependencies
+# 3. Set up Python virtual environment
+# 4. Install Django backend with Gunicorn
+# 5. Build Astro frontend static files
+# 6. Configure Nginx to serve both
+# 7. Set up systemd services for auto-start
 #
 # Usage: sudo bash deploy-aws-no-docker.sh
 ################################################################################
@@ -38,6 +39,27 @@ ACTUAL_USER=${SUDO_USER:-$USER}
 PROJECT_DIR=$(pwd)
 BACKEND_DIR="$PROJECT_DIR/portfolio-backend"
 FRONTEND_DIR="$PROJECT_DIR/portfolio-frontend"
+
+echo -e "${YELLOW}Step 0: Cleanup - Stopping Docker Containers${NC}"
+echo "=========================================="
+
+# Stop Docker containers if running (ignore errors)
+if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
+    echo "Stopping any running Docker containers..."
+    cd "$PROJECT_DIR"
+    docker-compose down 2>/dev/null || true
+    docker stop $(docker ps -aq) 2>/dev/null || true
+    echo -e "${GREEN}✓ Docker containers stopped${NC}"
+else
+    echo "Docker not found, skipping..."
+fi
+
+# Fix ownership of project directory
+echo "Fixing ownership of project directory..."
+chown -R $ACTUAL_USER:$ACTUAL_USER "$PROJECT_DIR"
+echo -e "${GREEN}✓ Ownership fixed${NC}"
+
+echo ""
 
 echo -e "${GREEN}Step 1: Detecting EC2 Instance Information${NC}"
 echo "=========================================="
@@ -90,14 +112,18 @@ echo ""
 echo -e "${GREEN}Step 3: Setting Up Python Virtual Environment${NC}"
 echo "=========================================="
 
-# Create virtual environment
+# Create virtual environment as actual user
 cd "$BACKEND_DIR"
-python3 -m venv venv
-source venv/bin/activate
+sudo -u $ACTUAL_USER python3 -m venv venv
 
-# Install Python dependencies
-pip install --upgrade pip
-pip install -r requirements.txt
+# Install Python dependencies as actual user
+echo "Installing Python packages..."
+sudo -u $ACTUAL_USER bash << 'BACKEND_EOF'
+source venv/bin/activate
+pip install --upgrade pip --quiet
+pip install -r requirements.txt --quiet
+deactivate
+BACKEND_EOF
 
 echo -e "${GREEN}✓ Python environment ready${NC}"
 
@@ -116,11 +142,18 @@ DJANGO_ALLOWED_HOSTS=$DOMAIN,localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN
 EOF
 
-# Run Django setup
-python manage.py migrate
-python manage.py collectstatic --noinput
+# Fix ownership of .env
+chown $ACTUAL_USER:$ACTUAL_USER "$BACKEND_DIR/.env"
 
+# Run Django setup as actual user
+echo "Running database migrations..."
+sudo -u $ACTUAL_USER bash << 'DJANGO_SETUP_EOF'
+cd portfolio-backend
+source venv/bin/activate
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput --clear
 deactivate
+DJANGO_SETUP_EOF
 
 echo -e "${GREEN}✓ Django backend configured${NC}"
 
@@ -128,6 +161,9 @@ echo ""
 echo -e "${GREEN}Step 5: Building Frontend${NC}"
 echo "=========================================="
 
+# Build frontend as actual user
+echo "Installing Node.js dependencies and building..."
+sudo -u $ACTUAL_USER bash << FRONTEND_EOF
 cd "$FRONTEND_DIR"
 
 # Set build-time environment variables
@@ -137,6 +173,7 @@ export SERVER_API_URL="http://127.0.0.1:8000"
 # Install dependencies and build
 npm ci
 npm run build
+FRONTEND_EOF
 
 echo -e "${GREEN}✓ Frontend built successfully${NC}"
 
@@ -172,12 +209,26 @@ RestartSec=3
 WantedBy=multi-user.target
 EOF
 
+# Stop service if already running
+systemctl stop portfolio-backend.service 2>/dev/null || true
+
 # Enable and start the service
 systemctl daemon-reload
 systemctl enable portfolio-backend.service
 systemctl start portfolio-backend.service
 
-echo -e "${GREEN}✓ Backend service created and started${NC}"
+# Wait for service to start
+sleep 3
+
+# Check if service started successfully
+if systemctl is-active --quiet portfolio-backend.service; then
+    echo -e "${GREEN}✓ Backend service created and started${NC}"
+else
+    echo -e "${RED}✗ Backend service failed to start${NC}"
+    echo "Checking logs..."
+    journalctl -u portfolio-backend -n 20 --no-pager
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}Step 7: Configuring Nginx${NC}"
