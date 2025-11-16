@@ -142,8 +142,8 @@ echo ""
 echo -e "${GREEN}Step 5: Creating Environment Configuration${NC}"
 echo "=========================================="
 
-# Generate Django secret key
-DJANGO_SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+# Generate Django secret key using Python's secrets module (no Django required)
+DJANGO_SECRET_KEY=$(python3 -c 'import secrets; print("".join(secrets.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(-_=+)") for i in range(50)))')
 
 # Create .env file
 cat > "$PROJECT_DIR/.env" << EOF
