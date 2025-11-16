@@ -39,7 +39,8 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
+# Python virtual environment lib directories (not TypeScript lib/)
+api/lib/
 lib64/
 parts/
 sdist/
