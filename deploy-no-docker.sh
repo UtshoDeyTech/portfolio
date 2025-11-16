@@ -17,6 +17,47 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo ""
+echo "Step 0: Removing Docker (if installed)"
+echo "=========================================="
+
+# Check if Docker is installed
+if command -v docker &> /dev/null; then
+    echo "Docker found. Removing completely..."
+
+    # Stop and remove all containers
+    sudo docker-compose down 2>/dev/null || true
+    sudo docker stop $(sudo docker ps -aq) 2>/dev/null || true
+    sudo docker rm $(sudo docker ps -aq) 2>/dev/null || true
+
+    # Stop Docker service
+    sudo systemctl stop docker 2>/dev/null || true
+    sudo systemctl disable docker 2>/dev/null || true
+
+    # Remove Docker packages
+    sudo apt-get purge -y docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin 2>/dev/null || true
+    sudo apt-get purge -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+
+    # Remove Docker directories
+    sudo rm -rf /var/lib/docker
+    sudo rm -rf /var/lib/containerd
+    sudo rm -rf /etc/docker
+    sudo rm -rf ~/.docker
+
+    # Remove Docker apt repository
+    sudo rm -f /etc/apt/sources.list.d/docker.list
+    sudo rm -f /etc/apt/keyrings/docker.gpg
+    sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg
+
+    # Clean up
+    sudo apt-get autoremove -y
+    sudo apt-get autoclean
+
+    echo -e "${GREEN}✓ Docker completely removed${NC}"
+else
+    echo "Docker not installed, skipping..."
+fi
+
+echo ""
 echo "Step 1: Detecting EC2 Instance Information"
 echo "=========================================="
 
