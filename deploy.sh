@@ -231,18 +231,36 @@ systemctl daemon-reload
 systemctl enable portfolio-backend.service
 systemctl start portfolio-backend.service
 
-# Wait for service to start
-sleep 3
+# Wait for service to start and be ready
+echo "Waiting for backend to be ready..."
+sleep 5
 
 # Check if service started successfully
 if systemctl is-active --quiet portfolio-backend.service; then
-    echo -e "${GREEN}✓ Backend service created and started${NC}"
+    echo -e "${GREEN}✓ Backend service is running${NC}"
 else
     echo -e "${RED}✗ Backend service failed to start${NC}"
     echo "Checking logs..."
     journalctl -u portfolio-backend -n 20 --no-pager
     exit 1
 fi
+
+# Wait for backend API to actually respond (health check)
+echo "Testing backend API connectivity..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/ | grep -q "200"; then
+        echo -e "${GREEN}✓ Backend API is responding${NC}"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        echo -e "${YELLOW}⚠ Backend API not responding after 30 seconds${NC}"
+        echo "  Continuing anyway - frontend build may fail to fetch data"
+    fi
+    sleep 1
+done
 
 echo ""
 echo -e "${GREEN}Step 6: Building Frontend${NC}"
@@ -308,7 +326,38 @@ server {
         add_header Cache-Control "public, max-age=21600, stale-while-revalidate=86400, must-revalidate";
     }
 
-    # Backend API - Cache API responses for 6 hours
+    # Backend API - NO caching for interactive endpoints (POST/mutations)
+    # Disable caching for: like, comments, view tracking
+    location ~ ^/api/blog-posts/[^/]+/(toggle-like|increment-view|update-duration|comments)/ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+
+        # NO caching - immediate updates
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        add_header Pragma "no-cache";
+        expires -1;
+    }
+
+    # Backend API - Short cache for blog detail (admin can update anytime)
+    # Cache for only 2 minutes so admin updates show quickly
+    location ~ ^/api/blog-posts/[^/]+/?$ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+
+        # Short cache for blog detail - 2 minutes
+        # This allows admin updates to show quickly
+        add_header Cache-Control "public, max-age=120, must-revalidate";
+    }
+
+    # Backend API - Cache read-only GET requests (lists, static data)
     location /api/ {
         proxy_pass http://backend/api/;
         proxy_set_header Host $host;
@@ -317,12 +366,18 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
 
-        # Cache API responses
+        # Only cache GET requests, never POST/PUT/DELETE
+        set $no_cache 0;
+        if ($request_method != GET) {
+            set $no_cache 1;
+        }
+
+        # Cache GET requests for 6 hours (lists, static data)
         add_header Cache-Control "public, max-age=21600, stale-while-revalidate=43200";
 
-        # Enable proxy caching
-        proxy_cache_bypass $http_pragma $http_authorization;
-        proxy_no_cache $http_pragma $http_authorization;
+        # Disable caching for non-GET requests
+        proxy_cache_bypass $no_cache;
+        proxy_no_cache $no_cache;
     }
 
     # Django Admin

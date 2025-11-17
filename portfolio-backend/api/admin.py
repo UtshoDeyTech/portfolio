@@ -266,7 +266,7 @@ class BlogAdmin(admin.ModelAdmin):
     unpublish_blogs.short_description = "Unpublish selected blogs"
 
     def get_urls(self):
-        """Add custom URLs for download/upload JSON."""
+        """Add custom URLs for download/upload JSON and preview."""
         from django.urls import path
         urls = super().get_urls()
         custom_urls = [
@@ -279,6 +279,11 @@ class BlogAdmin(admin.ModelAdmin):
                 '<int:object_id>/upload-json/',
                 self.admin_site.admin_view(self.upload_json_view),
                 name='api_blog_upload_json',
+            ),
+            path(
+                '<int:object_id>/preview/',
+                self.preview_blog_view,
+                name='api_blog_preview',
             ),
         ]
         return custom_urls + urls
@@ -401,6 +406,51 @@ class BlogAdmin(admin.ModelAdmin):
         except Exception as e:
             messages.error(request, f'Error updating blog: {str(e)}')
             return redirect(reverse('admin:api_blog_change', args=[object_id]))
+
+    def preview_blog_view(self, request, object_id):
+        """Preview blog post as it would appear to users."""
+        from django.shortcuts import render, get_object_or_404
+        from django.utils.html import escape
+        import markdown
+
+        try:
+            blog = get_object_or_404(Blog, pk=object_id)
+
+            # Convert markdown to HTML if needed
+            content_html = blog.content_html
+            if not content_html and blog.content_markdown:
+                # Use markdown library to convert
+                content_html = markdown.markdown(
+                    blog.content_markdown,
+                    extensions=['extra', 'codehilite', 'fenced_code', 'tables']
+                )
+
+            # Prepare context similar to frontend
+            context = {
+                'blog': blog,
+                'title': blog.title,
+                'subtitle': blog.subtitle,
+                'excerpt': blog.excerpt,
+                'author': blog.author,
+                'published_date': blog.published_date,
+                'tags': blog.tags,
+                'cover_image': blog.cover_image,
+                'content_html': content_html,
+                'views': blog.views,
+                'likes': blog.likes,
+                'comments_count': blog.comments_count,
+                'read_time': blog.read_time,
+                'category': blog.category,
+                'allow_comments': blog.allow_comments,
+                'is_preview': True,
+                'preview_mode': True,
+            }
+
+            return render(request, 'admin/blog_preview.html', context)
+
+        except Blog.DoesNotExist:
+            from django.http import Http404
+            raise Http404("Blog not found")
 
 
 @admin.register(BlogComment)

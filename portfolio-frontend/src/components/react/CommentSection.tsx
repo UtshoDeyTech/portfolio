@@ -38,7 +38,9 @@ export default function CommentSection({ slug, allowComments, initialCommentsCou
   const loadComments = async () => {
     setIsLoadingComments(true);
     try {
-      const response = await fetch(`${getApiUrl()}/api/blog-posts/${slug}/comments/list/`);
+      const response = await fetch(`${getApiUrl()}/api/blog-posts/${slug}/comments/list/`, {
+        cache: 'no-store', // Always fetch fresh comments, never use cache
+      });
       if (response.ok) {
         const data = await response.json();
         setComments(data);
@@ -56,6 +58,22 @@ export default function CommentSection({ slug, allowComments, initialCommentsCou
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Cache busting function - clears cached blog post data
+  const bustBlogCache = () => {
+    // Clear service worker cache if exists
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        cacheNames.forEach(cacheName => {
+          caches.open(cacheName).then(cache => {
+            // Delete cached blog post detail
+            cache.delete(`${getApiUrl()}/api/blog-posts/${slug}/`);
+            cache.delete(`${getApiUrl()}/api/blog-posts/${slug}`);
+          });
+        });
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -69,6 +87,7 @@ export default function CommentSection({ slug, allowComments, initialCommentsCou
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        cache: 'no-store', // Force fresh request, never use cached response
       });
 
       if (response.ok) {
@@ -76,8 +95,11 @@ export default function CommentSection({ slug, allowComments, initialCommentsCou
         setSuccessMessage(data.message || 'Comment added successfully!');
         setFormData({ author_name: '', author_email: '', comment_text: '' });
 
-        // Reload comments to show the new one
+        // Reload comments to show the new one (with fresh data)
         await loadComments();
+
+        // CACHE BUSTER: Clear browser cache for blog post
+        bustBlogCache();
       } else {
         const error = await response.json();
         setErrorMessage(error.error || 'Failed to submit comment. Please try again.');
