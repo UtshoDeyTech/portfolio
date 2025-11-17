@@ -1,321 +1,374 @@
-# AWS EC2 Deployment Guide
+# Portfolio Deployment Guide
 
-This guide will help you deploy your Portfolio project on AWS EC2 with Docker and Nginx.
+## 🚀 Quick Deploy (One Command)
 
-## 🚀 Quick Deployment
-
-### Prerequisites
-
-1. **AWS EC2 Instance** (Ubuntu 20.04 or later recommended)
-   - Instance Type: t2.medium or larger recommended
-   - Storage: At least 20GB
-   - Security Group: Allow ports 80 (HTTP) and 443 (HTTPS)
-
-2. **SSH Access** to your EC2 instance
-
-### Step 1: Launch EC2 Instance
-
-1. Go to AWS EC2 Console
-2. Click "Launch Instance"
-3. Choose **Ubuntu Server 22.04 LTS**
-4. Instance type: **t2.medium** (or larger)
-5. Configure Security Group:
-   ```
-   Type            Protocol    Port Range    Source
-   SSH             TCP         22            Your IP
-   HTTP            TCP         80            0.0.0.0/0
-   HTTPS           TCP         443           0.0.0.0/0
-   Custom TCP      TCP         8000          0.0.0.0/0 (for testing)
-   Custom TCP      TCP         4321          0.0.0.0/0 (for testing)
-   ```
-6. Launch and save your `.pem` key file
-
-### Step 2: Connect to EC2
+Deploy your portfolio to AWS EC2 or any Ubuntu/Debian server:
 
 ```bash
-# Make key file secure
-chmod 400 your-key.pem
-
-# Connect to EC2
-ssh -i your-key.pem ubuntu@your-ec2-public-ip
+sudo bash deploy.sh
 ```
 
-### Step 3: Clone Repository
+**That's it!** The script will:
+- ✅ Install all dependencies (Python, Node.js, Nginx)
+- ✅ Set up Django backend with Gunicorn
+- ✅ Build and serve Astro frontend
+- ✅ Configure Nginx for both frontend and backend
+- ✅ **Fix all static files issues** (Django admin CSS will work!)
+- ✅ Auto-detect EC2 public IP
+- ✅ Set up auto-restart services
+
+## 🔧 Prerequisites
+
+1. **Server**: AWS EC2 instance (Ubuntu 20.04+) or any Ubuntu/Debian server
+   - Instance Type: t2.small or larger
+   - Storage: At least 10GB
+   - Open ports: 80 (HTTP), 443 (HTTPS)
+
+2. **Access**: SSH access with sudo privileges
+
+## 📋 Step-by-Step Deployment
+
+### 1. Launch EC2 Instance
+
+1. Go to AWS EC2 Console → Launch Instance
+2. Choose **Ubuntu Server 22.04 LTS**
+3. Instance type: **t2.small** (minimum) or **t2.medium** (recommended)
+4. Configure Security Group:
+   ```
+   Type       Protocol    Port    Source
+   SSH        TCP         22      Your IP
+   HTTP       TCP         80      0.0.0.0/0
+   HTTPS      TCP         443     0.0.0.0/0
+   ```
+5. Launch and save your `.pem` key file
+
+### 2. Connect to Server
 
 ```bash
-# Update system
+chmod 400 your-key.pem
+ssh -i your-key.pem ubuntu@YOUR_EC2_IP
+```
+
+### 3. Clone Repository
+
+```bash
 sudo apt update
-
-# Install git
 sudo apt install -y git
-
-# Clone your repository
-git clone https://github.com/yourusername/portfolio.git
+git clone https://github.com/UtshoDeyTech/portfolio.git
 cd portfolio
 ```
 
-### Step 4: Run Deployment Script
+### 4. Deploy
 
 ```bash
-# Make script executable
-chmod +x deploy-aws.sh
-
-# Run deployment script (as root)
-sudo bash deploy-aws.sh
+sudo bash deploy.sh
 ```
 
-The script will:
-- ✅ Detect EC2 public IP automatically
-- ✅ Install Docker and Docker Compose
-- ✅ Install and configure Nginx
-- ✅ Create `.env` file with proper configurations
-- ✅ Update Django and Astro configs
-- ✅ Set up SSL (if you have a domain)
-- ✅ Build and start Docker containers
-- ✅ Run database migrations
-- ✅ Set up auto-restart on reboot
+The script will auto-detect your EC2 public IP and configure everything!
 
-### Step 5: Access Your Application
-
-After deployment completes, access your app:
-
-- **Frontend**: `http://your-ec2-public-ip`
-- **Backend API**: `http://your-ec2-public-ip/api`
-- **Admin Panel**: `http://your-ec2-public-ip/admin`
-
-## 🔧 Manual Configuration (if needed)
-
-### Update Django Settings
-
-If you need to manually update Django settings:
+### 5. Create Django Admin User
 
 ```bash
-nano portfolio-backend/portfolio_backend/settings.py
+cd portfolio-backend
+source venv/bin/activate
+python manage.py createsuperuser
+deactivate
 ```
 
-Update:
+### 6. Access Your Site
+
+- **Website**: `http://YOUR_EC2_IP`
+- **API**: `http://YOUR_EC2_IP/api/`
+- **Django Admin**: `http://YOUR_EC2_IP/admin/` (with full CSS styling!)
+
+## ✨ What Was Fixed
+
+### Critical Bug: Django Admin CSS Not Loading
+
+**❌ Previous Issue:**
+```nginx
+# Old deployment scripts had wrong path
+location /static/ {
+    alias /path/to/staticfiles/;  # ❌ This directory doesn't exist!
+}
+```
 ```python
-DEBUG = False
-ALLOWED_HOSTS = ['your-domain.com', 'your-ec2-ip', 'localhost']
+# But Django creates:
+STATIC_ROOT = BASE_DIR / 'static'  # Creates /static/ not /staticfiles/
 ```
 
-### Update Astro Config
+**✅ Fixed in deploy.sh:**
+```nginx
+# Correct path matching Django's STATIC_ROOT
+location /static/ {
+    alias /path/to/static/;  # ✅ Matches Django's actual directory
+}
+```
+
+**Result:** Django admin now loads with full CSS, JavaScript, and styling!
+
+### Other Improvements
+
+1. **No Extra Services** - Frontend served directly by Nginx (faster, no sirv-cli needed)
+2. **CORS Fixed** - Auto-configured with your domain/IP
+3. **Auto-detection** - Detects EC2 IP using AWS metadata service
+4. **Idempotent** - Safe to run multiple times for updates
+
+## 🔄 Update Deployment
+
+To update after pulling new code:
 
 ```bash
-nano portfolio-frontend/astro.config.mjs
+cd portfolio
+git pull origin main
+sudo bash deploy.sh
 ```
 
-Update:
-```javascript
-export default defineConfig({
-    site: 'http://your-ec2-public-ip',
-    // ... rest of config
-});
-```
+## 📊 Service Management
 
-### Update Environment Variables
-
+### Check Status
 ```bash
-nano .env
+sudo systemctl status portfolio-backend
+sudo systemctl status nginx
 ```
 
-Update URLs:
-```env
-VITE_API_URL=http://your-ec2-public-ip/api
-PUBLIC_API_URL=http://your-ec2-public-ip/api
-PUBLIC_SITE_URL=http://your-ec2-public-ip
+### View Logs
+```bash
+# Backend logs (live)
+sudo journalctl -u portfolio-backend -f
+
+# Nginx access logs
+sudo tail -f /var/log/nginx/access.log
+
+# Nginx error logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+### Restart Services
+```bash
+sudo systemctl restart portfolio-backend
+sudo systemctl reload nginx
+```
+
+## 🏗️ Architecture
+
+```
+┌───────────────────────────────────────────────────┐
+│                  Nginx :80                        │
+├───────────────────────────────────────────────────┤
+│                                                   │
+│  Frontend (/)                                     │
+│  └─> /dist/ (Astro static files)                │
+│                                                   │
+│  Backend (/api/, /admin/)                        │
+│  └─> Gunicorn :8000 (Django)                    │
+│                                                   │
+│  Static Files (/static/)                         │
+│  └─> portfolio-backend/static/                  │
+│                                                   │
+│  Media Files (/media/)                           │
+│  └─> portfolio-backend/media/                   │
+│                                                   │
+└───────────────────────────────────────────────────┘
 ```
 
 ## 🌐 Custom Domain Setup
 
-### Step 1: Point Domain to EC2
+### 1. Point Domain to EC2
 
-1. Go to your domain registrar (e.g., GoDaddy, Namecheap)
-2. Add an A record:
-   ```
-   Type: A
-   Name: @ (or subdomain)
-   Value: your-ec2-public-ip
-   TTL: 300
-   ```
+In your domain registrar (GoDaddy, Namecheap, etc.):
 
-### Step 2: Update Deployment
-
-Run deployment script again and provide your domain when prompted:
-```bash
-sudo bash deploy-aws.sh
+```
+Type: A Record
+Name: @ (or subdomain)
+Value: YOUR_EC2_IP
+TTL: 300
 ```
 
-### Step 3: SSL Certificate
+### 2. Re-run Deployment
 
-The script will automatically set up SSL with Let's Encrypt if you have a domain.
+The script will detect your domain:
 
-Manual SSL setup:
+```bash
+cd portfolio
+sudo bash deploy.sh
+# When prompted, enter your domain instead of IP
+```
+
+### 3. Add SSL Certificate
+
 ```bash
 sudo certbot --nginx -d yourdomain.com
 ```
 
-## 📊 Useful Commands
-
-### Docker Commands
+Then rebuild frontend with HTTPS:
 
 ```bash
-# View running containers
-docker-compose ps
-
-# View logs
-docker-compose logs -f
-
-# View backend logs
-docker-compose logs -f backend
-
-# View frontend logs
-docker-compose logs -f frontend
-
-# Restart all containers
-docker-compose restart
-
-# Stop all containers
-docker-compose down
-
-# Start all containers
-docker-compose up -d
-
-# Rebuild containers
-docker-compose up -d --build
+cd portfolio-frontend
+PUBLIC_API_URL=https://yourdomain.com npm run build
+sudo systemctl reload nginx
 ```
 
-### Django Commands
+## 🐛 Troubleshooting
+
+### Backend Not Responding
 
 ```bash
-# Create superuser
-docker-compose exec backend python manage.py createsuperuser
+# Check if service is running
+sudo systemctl status portfolio-backend
 
-# Run migrations
-docker-compose exec backend python manage.py migrate
+# View last 50 log lines
+sudo journalctl -u portfolio-backend -n 50
 
-# Collect static files
-docker-compose exec backend python manage.py collectstatic --noinput
-
-# Django shell
-docker-compose exec backend python manage.py shell
+# Restart service
+sudo systemctl restart portfolio-backend
 ```
 
-### Nginx Commands
+### Django Admin CSS Still Not Loading
 
 ```bash
-# Test Nginx configuration
+# Verify static files exist
+ls -la portfolio-backend/static/admin/css/
+
+# Fix permissions
+sudo chmod -R 755 portfolio-backend/static/
+
+# Verify nginx config
 sudo nginx -t
 
-# Reload Nginx
+# Check nginx is serving static files
+curl http://YOUR_IP/static/admin/css/base.css
+```
+
+### Frontend Can't Reach Backend
+
+```bash
+# Check CORS configuration
+cat portfolio-backend/.env | grep CORS
+
+# Should show: CORS_ALLOWED_ORIGINS=http://YOUR_IP,https://YOUR_IP
+
+# Rebuild frontend with correct API URL
+cd portfolio-frontend
+PUBLIC_API_URL=http://YOUR_IP npm run build
 sudo systemctl reload nginx
+```
 
-# Restart Nginx
-sudo systemctl restart nginx
+### Nginx Configuration Errors
 
-# View Nginx error logs
+```bash
+# Test nginx config
+sudo nginx -t
+
+# View error logs
 sudo tail -f /var/log/nginx/error.log
 
-# View Nginx access logs
-sudo tail -f /var/log/nginx/access.log
+# Restart nginx
+sudo systemctl restart nginx
 ```
 
-## 🔄 Updating Your Application
+## 💾 Database Management
+
+### Backup Database
 
 ```bash
-# Navigate to project directory
-cd ~/portfolio
-
-# Pull latest changes
-git pull origin main
-
-# Rebuild and restart containers
-docker-compose down
-docker-compose up -d --build
-
-# Run migrations (if any)
-docker-compose exec backend python manage.py migrate
-
-# Collect static files
-docker-compose exec backend python manage.py collectstatic --noinput
+cd portfolio-backend
+source venv/bin/activate
+python manage.py dumpdata > backup_$(date +%Y%m%d).json
+deactivate
 ```
 
-## 💾 Database Backup
+Or backup SQLite file directly:
 
 ```bash
-# Backup database
-docker-compose exec backend python manage.py dumpdata > backup_$(date +%Y%m%d_%H%M%S).json
+cp portfolio-backend/db.sqlite3 backup_$(date +%Y%m%d).sqlite3
+```
 
-# Or backup SQLite file directly
-cp portfolio-backend/db.sqlite3 db_backup_$(date +%Y%m%d_%H%M%S).sqlite3
+### Restore Database
+
+```bash
+cd portfolio-backend
+source venv/bin/activate
+python manage.py loaddata backup_20250117.json
+deactivate
 ```
 
 ## 🔒 Security Checklist
 
-- [ ] Change Django `SECRET_KEY` in `.env`
-- [ ] Set `DEBUG=False` in production
-- [ ] Configure proper `ALLOWED_HOSTS`
-- [ ] Set up SSL certificate
-- [ ] Configure firewall (ufw)
+- [x] Django `SECRET_KEY` auto-generated (random 50 characters)
+- [x] `DEBUG=False` in production
+- [x] `ALLOWED_HOSTS` configured with your domain/IP
+- [ ] SSL certificate installed (use certbot)
 - [ ] Regular database backups
-- [ ] Keep system and Docker images updated
-- [ ] Use strong passwords for admin accounts
+- [ ] Strong admin password created
+- [ ] Firewall configured (optional):
+  ```bash
+  sudo ufw allow 22/tcp
+  sudo ufw allow 80/tcp
+  sudo ufw allow 443/tcp
+  sudo ufw enable
+  ```
 
-## 🐛 Troubleshooting
+## 📈 Performance Tips
 
-### Containers won't start
+1. **Use t2.medium or larger** for better performance
+2. **Add swap space** if using t2.small:
+   ```bash
+   sudo fallocate -l 2G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+   ```
 
-```bash
-# Check logs
-docker-compose logs
+3. **Enable gzip compression** (already configured in nginx)
 
-# Check individual service
-docker-compose logs backend
-docker-compose logs frontend
-```
+## 🎯 Common Tasks
 
-### Can't access website
+### Add New Blog Post
 
-1. Check EC2 Security Group allows ports 80 and 443
-2. Check Nginx is running: `sudo systemctl status nginx`
-3. Check containers are running: `docker-compose ps`
-4. Check Nginx logs: `sudo tail -f /var/log/nginx/error.log`
+1. Login to admin: `http://YOUR_IP/admin/`
+2. Navigate to "Blog posts" → "Add blog post"
+3. Fill in details and save
+4. View on frontend: `http://YOUR_IP/blog/`
 
-### Database issues
+### Upload Project Images
 
-```bash
-# Reset database
-docker-compose down
-rm portfolio-backend/db.sqlite3
-docker-compose up -d
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py createsuperuser
-```
+1. Login to admin: `http://YOUR_IP/admin/`
+2. Navigate to "Projects" → Select project
+3. Upload image in "Thumbnail" or "Image" field
+4. Save
 
-### SSL certificate issues
+### View API Documentation
 
-```bash
-# Renew SSL certificate
-sudo certbot renew
+Visit: `http://YOUR_IP/api/` for API overview
 
-# Force renew
-sudo certbot renew --force-renewal
-```
+Available endpoints:
+- `/api/home/` - Home page data
+- `/api/blog-posts/` - All blog posts
+- `/api/projects/` - All projects
+- `/api/experience/` - Work experience
+- `/api/education/` - Education history
+- `/api/research/` - Research publications
 
 ## 📞 Support
 
-If you encounter issues:
+If deployment fails:
 
-1. Check logs: `docker-compose logs -f`
-2. Check Nginx logs: `sudo tail -f /var/log/nginx/error.log`
-3. Verify EC2 Security Group settings
-4. Ensure all environment variables are set correctly
+1. **Check logs**: `sudo journalctl -u portfolio-backend -n 100`
+2. **Verify nginx**: `sudo nginx -t`
+3. **Check disk space**: `df -h`
+4. **Verify services**: `sudo systemctl status portfolio-backend nginx`
 
 ## 🎉 Success!
 
-Your portfolio is now deployed and accessible to the world!
+Your portfolio is now live with:
+- ✅ Fast static frontend (Astro)
+- ✅ RESTful API backend (Django)
+- ✅ Fully styled admin panel
+- ✅ Auto-restart on failure
+- ✅ All endpoints accessible
 
-- Frontend: `http://your-domain-or-ip`
-- Admin: `http://your-domain-or-ip/admin`
+Access your portfolio at: **http://YOUR_EC2_IP**
 
 Enjoy! 🚀
