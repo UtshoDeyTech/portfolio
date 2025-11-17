@@ -144,7 +144,7 @@ if [ ! -f ".env" ]; then
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
 ALLOWED_HOSTS=$DOMAIN,$PUBLIC_IP,localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://$DOMAIN,http://$PUBLIC_IP,http://localhost:4321
+CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN,http://$PUBLIC_IP,https://$PUBLIC_IP,http://localhost:4321
 DATABASE_URL=sqlite:///db.sqlite3
 EOF
     echo -e "${GREEN}✓ .env file created${NC}"
@@ -173,8 +173,17 @@ cd "$SCRIPT_DIR/portfolio-frontend"
 echo "Installing npm dependencies..."
 npm install
 
+# Create .env file for frontend build
+echo "Creating frontend .env file..."
+cat > .env << EOF
+PUBLIC_API_URL=http://$DOMAIN
+EOF
+
 echo "Building Astro site..."
 npm run build
+
+# Clean up .env file after build (optional, for security)
+rm -f .env
 
 echo ""
 echo "Step 6: Setting up systemd services"
@@ -321,6 +330,22 @@ if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
     read -p "Enter email for SSL certificate: " EMAIL
     sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL"
     echo -e "${GREEN}✓ SSL certificate installed${NC}"
+
+    # Rebuild frontend with HTTPS API URL
+    echo ""
+    echo "Rebuilding frontend with HTTPS API URL..."
+    cd "$SCRIPT_DIR/portfolio-frontend"
+    cat > .env << EOF
+PUBLIC_API_URL=https://$DOMAIN
+EOF
+    npm run build
+    rm -f .env
+
+    # Restart frontend service to use new build
+    sudo systemctl restart portfolio-frontend
+    echo -e "${GREEN}✓ Frontend rebuilt with HTTPS${NC}"
+
+    cd "$SCRIPT_DIR"
 else
     echo "Skipping SSL setup (no custom domain)"
 fi
