@@ -282,7 +282,7 @@ class BlogAdmin(admin.ModelAdmin):
             ),
             path(
                 '<int:object_id>/preview/',
-                self.preview_blog_view,
+                self.admin_site.admin_view(self.preview_blog_view),
                 name='api_blog_preview',
             ),
         ]
@@ -414,15 +414,18 @@ class BlogAdmin(admin.ModelAdmin):
         try:
             blog = get_object_or_404(Blog, pk=object_id)
 
-            # Convert markdown to HTML
+            # Convert markdown to HTML using same extensions as the API serializer
             content_html = ''
             if blog.content_markdown:
                 try:
                     import markdown
-                    content_html = markdown.markdown(
-                        blog.content_markdown,
-                        extensions=['extra', 'codehilite', 'fenced_code', 'tables']
-                    )
+                    md = markdown.Markdown(extensions=[
+                        'extra',      # Includes tables, fenced code blocks, etc.
+                        'codehilite', # Syntax highlighting for code blocks
+                        'toc',        # Table of contents
+                        'nl2br',      # Convert newlines to <br>
+                    ])
+                    content_html = md.convert(blog.content_markdown)
                 except ImportError:
                     # Markdown library not available, use plain markdown text
                     # Wrap in pre tag to preserve formatting
