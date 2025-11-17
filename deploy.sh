@@ -165,8 +165,21 @@ python manage.py collectstatic --noinput --clear
 deactivate
 DJANGO_SETUP_EOF
 
-# Fix static files permissions
-chmod -R 755 "$BACKEND_DIR/static"
+# Fix static and media files permissions for nginx (www-data user)
+echo "Setting static and media files permissions..."
+# Set directories to 755 (rwxr-xr-x)
+find "$BACKEND_DIR/static" -type d -exec chmod 755 {} \;
+# Set files to 644 (rw-r--r--)
+find "$BACKEND_DIR/static" -type f -exec chmod 644 {} \;
+
+# Create media directory if it doesn't exist and set permissions
+mkdir -p "$BACKEND_DIR/media"
+chown -R $ACTUAL_USER:$ACTUAL_USER "$BACKEND_DIR/media"
+chmod 755 "$BACKEND_DIR/media"
+
+# Make sure nginx user (www-data) can access parent directories
+chmod 755 "$BACKEND_DIR"
+chmod 755 "$PROJECT_DIR"
 echo -e "${GREEN}✓ Django backend configured${NC}"
 
 echo ""
@@ -345,6 +358,24 @@ echo "Testing Django admin static files..."
 STATIC_TEST=$(curl -s -o /dev/null -w "%{http_code}" http://$DOMAIN/static/admin/css/base.css || echo "000")
 if [ "$STATIC_TEST" = "200" ]; then
     echo -e "${GREEN}✓ Django admin CSS loading correctly${NC}"
+elif [ "$STATIC_TEST" = "403" ]; then
+    echo -e "${YELLOW}⚠ Permission denied (403) - Fixing permissions...${NC}"
+    # Fix permissions again with more aggressive settings
+    find "$BACKEND_DIR/static" -type d -exec chmod 755 {} \;
+    find "$BACKEND_DIR/static" -type f -exec chmod 644 {} \;
+    chmod 755 "$BACKEND_DIR"
+    chmod 755 "$PROJECT_DIR"
+    # Restart nginx
+    systemctl reload nginx
+    sleep 1
+    # Test again
+    STATIC_TEST_RETRY=$(curl -s -o /dev/null -w "%{http_code}" http://$DOMAIN/static/admin/css/base.css || echo "000")
+    if [ "$STATIC_TEST_RETRY" = "200" ]; then
+        echo -e "${GREEN}✓ Django admin CSS now loading correctly${NC}"
+    else
+        echo -e "${RED}✗ Still getting HTTP $STATIC_TEST_RETRY${NC}"
+        echo "  Check permissions: ls -la $BACKEND_DIR/static/"
+    fi
 else
     echo -e "${YELLOW}⚠ Django admin CSS test returned HTTP $STATIC_TEST${NC}"
 fi
