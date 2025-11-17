@@ -77,7 +77,18 @@ const getTypeColor = (): string => {
 ---
 
 <article class='research-card bg-base-100 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-t-4 border-primary/70 border-2 border-base-300 overflow-hidden mb-6'>
-  <div class='p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4'>
+  <div class='p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 relative'>
+
+    {/* Expand/Collapse Button */}
+    <button
+      class='expand-btn absolute top-4 right-4 p-2 hover:bg-base-200 rounded-lg transition-colors z-10'
+      aria-label='Toggle details'
+    >
+      <svg class='w-6 h-6 text-base-content/70 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+        <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
+      </svg>
+    </button>
+
     {data.hasCoverImage && (
       <div class='w-full h-44 overflow-hidden rounded-lg mb-3'>
         <img src={(item as any).cover_image} alt={item.title ?? 'Research image'} class='w-full h-full object-cover' />
@@ -153,11 +164,13 @@ const getTypeColor = (): string => {
       )}
     </div>
   </div>
-  
-  <div class="divider m-0 h-px bg-base-300"></div>
 
-  <div class='p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6'>
-    {/* Abstract/Description - Prominent and readable */}
+  <!-- Collapsible Details Section -->
+  <div class='details-content overflow-hidden transition-all duration-300' style='max-height: 0;'>
+    <div class="divider m-0 h-px bg-base-300"></div>
+
+    <div class='p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6'>
+      {/* Abstract/Description - Prominent and readable */}
     {(data.hasDescription || data.hasAbstract) && (
       <div class='space-y-3'>
         <h4 class='text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2'>
@@ -380,8 +393,41 @@ const getTypeColor = (): string => {
         )}
       </div>
     )}
+    </div>
   </div>
 </article>
+
+<script>
+  // Accordion functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.research-card');
+
+    cards.forEach(card => {
+      const expandBtn = card.querySelector('.expand-btn');
+      const detailsContent = card.querySelector('.details-content');
+      const chevron = expandBtn?.querySelector('svg');
+
+      if (!expandBtn || !detailsContent) return;
+
+      expandBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isExpanded = card.classList.contains('expanded');
+
+        if (isExpanded) {
+          // Collapse
+          card.classList.remove('expanded');
+          detailsContent.style.maxHeight = '0';
+          if (chevron) chevron.style.transform = 'rotate(0deg)';
+        } else {
+          // Expand
+          card.classList.add('expanded');
+          detailsContent.style.maxHeight = detailsContent.scrollHeight + 'px';
+          if (chevron) chevron.style.transform = 'rotate(180deg)';
+        }
+      });
+    });
+  });
+</script>
 
 <style>
   /* Keep the original hover effect for a sense of lift/depth */

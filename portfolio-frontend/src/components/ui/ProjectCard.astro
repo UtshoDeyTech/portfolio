@@ -74,6 +74,16 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
 
     <!-- Header Block: Title, Role, Organization, and Key Metrics -->
     <div class='p-4 sm:p-6 bg-base-200/50 border-b border-base-300/80'>
+
+      {/* Expand/Collapse Button */}
+      <button
+        class='expand-btn absolute top-4 right-4 p-2 hover:bg-base-100 rounded-lg transition-colors z-10'
+        aria-label='Toggle details'
+      >
+        <svg class='w-6 h-6 text-base-content/70 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
+        </svg>
+      </button>
       <div class='flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4'>
         
         <!-- Type Badge (Prominent) -->
@@ -130,10 +140,12 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
       )}
     </div>
 
-    <!-- Main Content Section -->
-    <div class='p-4 sm:p-6 space-y-4 sm:space-y-6 md:space-y-8'>
-      
-      {/* Short/Long Description */}
+    <!-- Collapsible Details Section -->
+    <div class='details-content overflow-hidden transition-all duration-300' style='max-height: 0;'>
+      <!-- Main Content Section -->
+      <div class='p-4 sm:p-6 space-y-4 sm:space-y-6 md:space-y-8'>
+
+        {/* Short/Long Description */}
       {(hasShortDescription || hasDescription) && (
         <div class='bg-base-200 p-4 rounded-lg border border-base-300'>
           <p class='text-base-content/90 leading-relaxed text-sm'>
@@ -308,9 +320,43 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
           ))}
         </div>
       )}
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+  // Accordion functionality
+  document.addEventListener('DOMContentLoaded', () => {
+    const wrappers = document.querySelectorAll('.project-card-wrapper');
+
+    wrappers.forEach(wrapper => {
+      const expandBtn = wrapper.querySelector('.expand-btn');
+      const detailsContent = wrapper.querySelector('.details-content');
+      const chevron = expandBtn?.querySelector('svg');
+      const card = wrapper.querySelector('.project-card');
+
+      if (!expandBtn || !detailsContent) return;
+
+      expandBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isExpanded = card?.classList.contains('expanded');
+
+        if (isExpanded) {
+          // Collapse
+          card?.classList.remove('expanded');
+          detailsContent.style.maxHeight = '0';
+          if (chevron) chevron.style.transform = 'rotate(0deg)';
+        } else {
+          // Expand
+          card?.classList.add('expanded');
+          detailsContent.style.maxHeight = detailsContent.scrollHeight + 'px';
+          if (chevron) chevron.style.transform = 'rotate(180deg)';
+        }
+      });
+    });
+  });
+</script>
 
 <style>
   .project-card-wrapper {
