@@ -180,6 +180,15 @@ chmod 755 "$BACKEND_DIR/media"
 # Make sure nginx user (www-data) can access parent directories
 chmod 755 "$BACKEND_DIR"
 chmod 755 "$PROJECT_DIR"
+
+# CRITICAL: Allow nginx to traverse through home directory
+# Without this, nginx gets 403 errors trying to access static files
+HOME_DIR=$(dirname "$PROJECT_DIR")
+if [[ "$HOME_DIR" =~ ^/home/ ]]; then
+    echo "Allowing nginx to access home directory: $HOME_DIR"
+    chmod 755 "$HOME_DIR"
+fi
+
 echo -e "${GREEN}✓ Django backend configured${NC}"
 
 echo ""
@@ -365,6 +374,12 @@ elif [ "$STATIC_TEST" = "403" ]; then
     find "$BACKEND_DIR/static" -type f -exec chmod 644 {} \;
     chmod 755 "$BACKEND_DIR"
     chmod 755 "$PROJECT_DIR"
+    # Fix home directory permissions (most common cause of 403)
+    HOME_DIR=$(dirname "$PROJECT_DIR")
+    if [[ "$HOME_DIR" =~ ^/home/ ]]; then
+        echo "  Fixing home directory permissions: $HOME_DIR"
+        chmod 755 "$HOME_DIR"
+    fi
     # Restart nginx
     systemctl reload nginx
     sleep 1
@@ -374,7 +389,12 @@ elif [ "$STATIC_TEST" = "403" ]; then
         echo -e "${GREEN}✓ Django admin CSS now loading correctly${NC}"
     else
         echo -e "${RED}✗ Still getting HTTP $STATIC_TEST_RETRY${NC}"
-        echo "  Check permissions: ls -la $BACKEND_DIR/static/"
+        echo "  Debug: ls -ld $HOME_DIR"
+        ls -ld "$HOME_DIR"
+        echo "  Debug: ls -ld $PROJECT_DIR"
+        ls -ld "$PROJECT_DIR"
+        echo "  Debug: ls -ld $BACKEND_DIR/static"
+        ls -ld "$BACKEND_DIR/static"
     fi
 else
     echo -e "${YELLOW}⚠ Django admin CSS test returned HTTP $STATIC_TEST${NC}"
