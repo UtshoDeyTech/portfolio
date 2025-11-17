@@ -160,6 +160,8 @@ class HomeDataAdmin(admin.ModelAdmin):
 
 @admin.register(Blog)
 class BlogAdmin(admin.ModelAdmin):
+    change_form_template = 'admin/blog_change_form.html'
+
     list_display = (
         'title',
         'author',
@@ -262,6 +264,143 @@ class BlogAdmin(admin.ModelAdmin):
         updated = queryset.update(is_published=False)
         self.message_user(request, f'{updated} blog(s) unpublished.')
     unpublish_blogs.short_description = "Unpublish selected blogs"
+
+    def get_urls(self):
+        """Add custom URLs for download/upload JSON."""
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:object_id>/download-json/',
+                self.admin_site.admin_view(self.download_json_view),
+                name='api_blog_download_json',
+            ),
+            path(
+                '<int:object_id>/upload-json/',
+                self.admin_site.admin_view(self.upload_json_view),
+                name='api_blog_upload_json',
+            ),
+        ]
+        return custom_urls + urls
+
+    def download_json_view(self, request, object_id):
+        """Download blog content as JSON."""
+        from django.http import JsonResponse, HttpResponse
+        import json
+        from django.core.serializers.json import DjangoJSONEncoder
+
+        try:
+            blog = Blog.objects.get(pk=object_id)
+
+            # Create a dictionary with all blog fields
+            blog_data = {
+                'slug': blog.slug,
+                'title': blog.title,
+                'subtitle': blog.subtitle,
+                'excerpt': blog.excerpt,
+                'content_markdown': blog.content_markdown,
+                'cover_image': blog.cover_image,
+                'featured_image': blog.featured_image,
+                'category': blog.category,
+                'tags': blog.tags,
+                'author': blog.author,
+                'published_date': blog.published_date.isoformat() if blog.published_date else None,
+                'views': blog.views,
+                'likes': blog.likes,
+                'comments_count': blog.comments_count,
+                'shares': blog.shares,
+                'is_published': blog.is_published,
+                'is_featured': blog.is_featured,
+                'is_trending': blog.is_trending,
+                'is_editor_choice': blog.is_editor_choice,
+                'allow_comments': blog.allow_comments,
+                'display_order': blog.display_order,
+                'read_time': blog.read_time,
+                'meta_description': blog.meta_description,
+                'meta_keywords': blog.meta_keywords,
+            }
+
+            # Create JSON response
+            response = HttpResponse(
+                json.dumps(blog_data, indent=2, cls=DjangoJSONEncoder),
+                content_type='application/json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="blog_{blog.slug}_{blog.id}.json"'
+            return response
+
+        except Blog.DoesNotExist:
+            return JsonResponse({'error': 'Blog not found'}, status=404)
+
+    def upload_json_view(self, request, object_id):
+        """Update blog content from uploaded JSON."""
+        from django.http import JsonResponse
+        from django.shortcuts import redirect
+        from django.contrib import messages
+        from django.urls import reverse
+        import json
+        from datetime import datetime
+
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
+        try:
+            blog = Blog.objects.get(pk=object_id)
+
+            # Get uploaded file
+            if 'json_file' not in request.FILES:
+                messages.error(request, 'No JSON file uploaded.')
+                return redirect(reverse('admin:api_blog_change', args=[object_id]))
+
+            json_file = request.FILES['json_file']
+
+            # Read and parse JSON
+            try:
+                json_data = json.loads(json_file.read().decode('utf-8'))
+            except json.JSONDecodeError as e:
+                messages.error(request, f'Invalid JSON file: {str(e)}')
+                return redirect(reverse('admin:api_blog_change', args=[object_id]))
+
+            # Update blog fields from JSON
+            updateable_fields = [
+                'slug', 'title', 'subtitle', 'excerpt', 'content_markdown',
+                'cover_image', 'featured_image', 'category', 'tags', 'author',
+                'views', 'likes', 'comments_count', 'shares',
+                'is_published', 'is_featured', 'is_trending', 'is_editor_choice',
+                'allow_comments', 'display_order', 'read_time',
+                'meta_description', 'meta_keywords'
+            ]
+
+            updated_fields = []
+            for field in updateable_fields:
+                if field in json_data:
+                    # Handle published_date separately (datetime field)
+                    if field == 'published_date':
+                        continue
+                    setattr(blog, field, json_data[field])
+                    updated_fields.append(field)
+
+            # Handle published_date separately
+            if 'published_date' in json_data and json_data['published_date']:
+                try:
+                    blog.published_date = datetime.fromisoformat(json_data['published_date'].replace('Z', '+00:00'))
+                    updated_fields.append('published_date')
+                except (ValueError, AttributeError):
+                    messages.warning(request, 'Could not parse published_date from JSON.')
+
+            blog.save()
+
+            messages.success(
+                request,
+                f'Blog updated successfully! Updated fields: {", ".join(updated_fields)}'
+            )
+            return redirect(reverse('admin:api_blog_change', args=[object_id]))
+
+        except Blog.DoesNotExist:
+            messages.error(request, 'Blog not found.')
+            return redirect(reverse('admin:api_blog_changelist'))
+        except Exception as e:
+            messages.error(request, f'Error updating blog: {str(e)}')
+            return redirect(reverse('admin:api_blog_change', args=[object_id]))
 
 
 @admin.register(BlogComment)
