@@ -45,30 +45,30 @@ const profileSrc = (hero && hero.profile_image && !hero.profile_image.startsWith
 ---
 
 <Layout>
-  <!-- Hero Section -->
-  <section class='mb-16'>
-    <div class='flex flex-col lg:flex-row items-center gap-12'>
+  <!-- Hero Section - Improved with consistent spacing -->
+  <section class='mb-section'>
+    <div class='flex flex-col lg:flex-row items-center lg:items-start gap-12 lg:gap-16'>
       <!-- Profile Image -->
       <div class='flex-shrink-0'>
         <div class='relative group'>
-          <div class='absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity'></div>
+          <div class='absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-slow'></div>
           <img
             src={profileSrc}
             alt={hero.name}
-            class='relative w-64 h-64 rounded-full object-cover shadow-2xl ring-4 ring-primary/20 group-hover:scale-105 transition-transform duration-300'
+            class='relative w-56 h-56 lg:w-72 lg:h-72 rounded-full object-cover shadow-card-hover ring-4 ring-primary/10 group-hover:ring-primary/20 group-hover:shadow-card-active transition-slow'
           />
         </div>
       </div>
 
       <!-- Hero Content -->
-      <div class='flex-1 text-center lg:text-left'>
-        <h1 class='text-5xl lg:text-6xl font-bold text-base-content mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent'>
+      <div class='flex-1 text-center lg:text-left max-w-3xl'>
+        <h1 class='text-4xl sm:text-5xl lg:text-6xl font-bold text-base-content mb-6 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent leading-tight'>
           {hero.name}
         </h1>
-        <p class='text-xl lg:text-2xl text-primary font-semibold mb-6'>
+        <p class='text-xl sm:text-2xl lg:text-3xl text-primary font-semibold mb-6 leading-snug'>
           {hero.tagline}
         </p>
-        <p class='text-base-content/80 text-lg mb-8 max-w-3xl'>
+        <p class='text-base-content/90 text-lg sm:text-xl mb-8 leading-relaxed'>
           {hero.bio}
         </p>
 
@@ -135,45 +135,47 @@ const profileSrc = (hero && hero.profile_image && !hero.profile_image.startsWith
     </div>
   </section>
 
-  <!-- Stats Section -->
+  <!-- Stats Section - Improved cards with better hierarchy -->
   {Object.values(stats).some(val => val !== undefined) && (
-    <section class='mb-16'>
-      <div class='grid grid-cols-2 md:grid-cols-4 gap-6'>
+    <section class='mb-section'>
+      <div class='grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6'>
         {stats.years_of_experience && (
-          <div class='bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-6 text-center border border-primary/20 hover:shadow-lg transition-shadow'>
-            <div class='text-4xl font-bold text-primary mb-2'>{stats.years_of_experience}</div>
-            <div class='text-sm text-base-content/70'>Years Experience</div>
+          <div class='bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl p-card text-center border border-primary/20 hover:border-primary/40 hover:shadow-card-hover transition-normal group'>
+            <div class='text-5xl font-bold text-primary mb-3 group-hover:scale-110 transition-normal'>{stats.years_of_experience}</div>
+            <div class='text-sm sm:text-base font-medium text-base-content/80'>Years Experience</div>
           </div>
         )}
         {stats.projects_completed && (
-          <div class='bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-xl p-6 text-center border border-secondary/20 hover:shadow-lg transition-shadow'>
-            <div class='text-4xl font-bold text-secondary mb-2'>{stats.projects_completed}+</div>
-            <div class='text-sm text-base-content/70'>Projects Completed</div>
+          <div class='bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl p-card text-center border border-secondary/20 hover:border-secondary/40 hover:shadow-card-hover transition-normal group'>
+            <div class='text-5xl font-bold text-secondary mb-3 group-hover:scale-110 transition-normal'>{stats.projects_completed}+</div>
+            <div class='text-sm sm:text-base font-medium text-base-content/80'>Projects Completed</div>
           </div>
         )}
         {stats.publications && (
-          <div class='bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl p-6 text-center border border-accent/20 hover:shadow-lg transition-shadow'>
-            <div class='text-4xl font-bold text-accent mb-2'>{stats.publications}</div>
-            <div class='text-sm text-base-content/70'>Publications</div>
+          <div class='bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl p-card text-center border border-accent/20 hover:border-accent/40 hover:shadow-card-hover transition-normal group'>
+            <div class='text-5xl font-bold text-accent mb-3 group-hover:scale-110 transition-normal'>{stats.publications}</div>
+            <div class='text-sm sm:text-base font-medium text-base-content/80'>Publications</div>
           </div>
         )}
         {stats.technologies_used && (
-          <div class='bg-gradient-to-br from-success/10 to-success/5 rounded-xl p-6 text-center border border-success/20 hover:shadow-lg transition-shadow'>
-            <div class='text-4xl font-bold text-success mb-2'>{stats.technologies_used}+</div>
-            <div class='text-sm text-base-content/70'>Technologies</div>
+          <div class='bg-gradient-to-br from-success/10 to-success/5 rounded-2xl p-card text-center border border-success/20 hover:border-success/40 hover:shadow-card-hover transition-normal group'>
+            <div class='text-5xl font-bold text-success mb-3 group-hover:scale-110 transition-normal'>{stats.technologies_used}+</div>
+            <div class='text-sm sm:text-base font-medium text-base-content/80'>Technologies</div>
           </div>
         )}
       </div>
     </section>
   )}
 
-  <!-- About Section -->
-  <section class='mb-16'>
-    <div class='bg-base-200 rounded-2xl p-8 md:p-12 border border-base-300'>
-      <h2 class='text-3xl font-bold text-base-content mb-6 flex items-center gap-3'>
-        <svg class='w-8 h-8 text-primary' fill='currentColor' viewBox='0 0 20 20'>
-          <path fill-rule='evenodd' d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z' clip-rule='evenodd'></path>
-        </svg>
+  <!-- About Section - Improved with better spacing and typography -->
+  <section class='mb-section'>
+    <div class='bg-base-200/50 rounded-3xl p-8 sm:p-10 md:p-12 border border-base-300 hover:border-base-300/60 transition-normal'>
+      <h2 class='text-3xl sm:text-4xl font-bold text-base-content mb-8 flex items-center gap-3'>
+        <span class='flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary'>
+          <svg class='w-6 h-6' fill='currentColor' viewBox='0 0 20 20'>
+            <path fill-rule='evenodd' d='M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z' clip-rule='evenodd'></path>
+          </svg>
+        </span>
         {about.title}
       </h2>
 

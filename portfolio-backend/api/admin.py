@@ -451,11 +451,11 @@ class MediaFileAdmin(admin.ModelAdmin):
         'title_or_filename',
         'file_type',
         'file_preview',
-        'slug',
         'file_size_display_field',
         'is_public',
         'uploaded_at',
-        'copy_url_button'
+        'copy_url_button',
+        'view_file_link'
     )
 
     list_filter = (
@@ -476,6 +476,7 @@ class MediaFileAdmin(admin.ModelAdmin):
         'original_filename',
         'file_size',
         'file_size_display_field',
+        'mime_type',
         'uploaded_at',
         'updated_at',
         'file_preview_large',
@@ -520,74 +521,103 @@ class MediaFileAdmin(admin.ModelAdmin):
 
     def title_or_filename(self, obj):
         """Show title if available, otherwise show filename."""
-        return obj.title if obj.title else obj.original_filename
+        if not obj or not obj.pk:
+            return '-'
+        try:
+            return obj.title if obj.title else obj.original_filename
+        except Exception:
+            return '-'
     title_or_filename.short_description = "Title / Filename"
 
     def file_size_display_field(self, obj):
         """Show human-readable file size."""
-        return obj.get_file_size_display()
+        if not obj or not obj.pk:
+            return '-'
+        try:
+            return obj.get_file_size_display()
+        except Exception:
+            return '-'
     file_size_display_field.short_description = "File Size"
 
     def file_preview(self, obj):
         """Show thumbnail preview for images in list view."""
-        if obj.file_type == 'image' and obj.file:
-            return format_html(
-                '<img src="{}" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;" />',
-                obj.get_file_url()
-            )
-        elif obj.file_type == 'video':
-            return format_html('🎥')
-        elif obj.file_type == 'audio':
-            return format_html('🎵')
-        elif obj.file_type == 'document':
-            return format_html('📄')
-        elif obj.file_type == 'archive':
-            return format_html('📦')
-        else:
-            return format_html('📎')
+        if not obj or not obj.pk:
+            return '-'
+
+        try:
+            if obj.file_type == 'image' and obj.file:
+                return format_html(
+                    '<img src="{}" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;" />',
+                    obj.get_file_url()
+                )
+            elif obj.file_type == 'video':
+                return format_html('🎥')
+            elif obj.file_type == 'audio':
+                return format_html('🎵')
+            elif obj.file_type == 'document':
+                return format_html('📄')
+            elif obj.file_type == 'archive':
+                return format_html('📦')
+            else:
+                return format_html('📎')
+        except Exception:
+            return '-'
     file_preview.short_description = "Preview"
 
     def file_preview_large(self, obj):
         """Show larger preview in detail view."""
-        if obj.file_type == 'image' and obj.file:
-            return format_html(
-                '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;" />',
-                obj.get_file_url()
-            )
-        elif obj.file_type == 'video' and obj.file:
-            return format_html(
-                '<video controls style="max-width: 400px; border-radius: 8px;"><source src="{}"></video>',
-                obj.get_file_url()
-            )
-        elif obj.file_type == 'audio' and obj.file:
-            return format_html(
-                '<audio controls style="width: 400px;"><source src="{}"></audio>',
-                obj.get_file_url()
-            )
-        else:
-            return format_html('<p>Preview not available for this file type.</p>')
+        if not obj or not obj.pk:
+            return format_html('<p style="color: #666; font-style: italic;">Preview will be available after saving</p>')
+
+        try:
+            if obj.file_type == 'image' and obj.file:
+                return format_html(
+                    '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;" />',
+                    obj.get_file_url()
+                )
+            elif obj.file_type == 'video' and obj.file:
+                return format_html(
+                    '<video controls style="max-width: 400px; border-radius: 8px;"><source src="{}"></video>',
+                    obj.get_file_url()
+                )
+            elif obj.file_type == 'audio' and obj.file:
+                return format_html(
+                    '<audio controls style="width: 400px;"><source src="{}"></audio>',
+                    obj.get_file_url()
+                )
+            else:
+                return format_html('<p>Preview not available for this file type.</p>')
+        except Exception:
+            return format_html('<p style="color: #999;">Error loading preview</p>')
     file_preview_large.short_description = "File Preview"
 
     def cdn_url_display(self, obj):
         """Display the CDN URL with a copy button."""
-        if obj.slug:
-            url = obj.get_file_url()
-            # Use JavaScript to construct absolute URL and provide copy functionality
-            return format_html(
-                '<div style="display: flex; gap: 8px; align-items: center;">'
-                '<input type="text" id="cdn_url_{}" readonly style="width: 400px; padding: 4px; font-family: monospace;" />'
-                '<button type="button" onclick="'
-                'var input = document.getElementById(\'cdn_url_{}\'); '
-                'navigator.clipboard.writeText(input.value).then(() => {{ '
-                'alert(\'✓ URL copied: \' + input.value); '
-                '}}).catch(() => {{ alert(\'Failed to copy URL\'); }});" '
-                'style="padding: 4px 12px; cursor: pointer; background: #417690; color: white; border: none; border-radius: 4px;">'
-                'Copy</button>'
-                '</div>'
-                '<script>document.getElementById("cdn_url_{}").value = window.location.protocol + "//" + window.location.host + "{}";</script>',
-                obj.id, obj.id, obj.id, url
-            )
-        return '-'
+        # Check if object has been saved (has an ID)
+        if not obj or not obj.pk:
+            return format_html('<p style="color: #666; font-style: italic;">URL will be available after saving</p>')
+
+        try:
+            if obj.slug:
+                url = obj.get_file_url()
+                # Use JavaScript to construct absolute URL and provide copy functionality
+                return format_html(
+                    '<div style="display: flex; gap: 8px; align-items: center;">'
+                    '<input type="text" id="cdn_url_{}" readonly style="width: 400px; padding: 4px; font-family: monospace;" />'
+                    '<button type="button" onclick="'
+                    'var input = document.getElementById(\'cdn_url_{}\'); '
+                    'navigator.clipboard.writeText(input.value).then(() => {{ '
+                    'alert(\'✓ URL copied: \' + input.value); '
+                    '}}).catch(() => {{ alert(\'Failed to copy URL\'); }});" '
+                    'style="padding: 4px 12px; cursor: pointer; background: #417690; color: white; border: none; border-radius: 4px;">'
+                    'Copy</button>'
+                    '</div>'
+                    '<script>document.getElementById("cdn_url_{}").value = window.location.protocol + "//" + window.location.host + "{}";</script>',
+                    obj.id, obj.id, obj.id, url
+                )
+            return '-'
+        except Exception:
+            return format_html('<p style="color: #999;">Error generating URL</p>')
     cdn_url_display.short_description = "CDN URL"
 
     def api_url_display(self, obj):
@@ -596,18 +626,51 @@ class MediaFileAdmin(admin.ModelAdmin):
     api_url_display.short_description = "API URL"
 
     def copy_url_button(self, obj):
-        """Show a copy URL button in list view."""
-        if obj.slug:
+        """Show the CDN URL with a copy button in list view."""
+        if not obj or not obj.pk or not obj.slug:
+            return '-'
+
+        try:
             url = obj.get_file_url()
-            # Use JavaScript to construct absolute URL dynamically
+            # Create an ID for this specific button
+            button_id = f"url_{obj.id}"
+            # Show URL text and copy button
             return format_html(
-                '<button onclick="var fullUrl = window.location.protocol + \'//\' + window.location.host + \'{}\'; '
-                'navigator.clipboard.writeText(fullUrl); alert(\'URL copied: \' + fullUrl);" '
-                'style="padding: 4px 8px; cursor: pointer;">Copy URL</button>',
-                url
+                '<div style="display: flex; gap: 4px; align-items: center;">'
+                '<code id="{}" style="font-size: 11px; padding: 2px 4px; background: #f0f0f0; border-radius: 2px;"></code>'
+                '<button onclick="'
+                'var urlElem = document.getElementById(\'{}\'); '
+                'navigator.clipboard.writeText(urlElem.textContent).then(() => {{ '
+                'alert(\'✓ URL copied: \' + urlElem.textContent); '
+                '}}).catch(() => {{ alert(\'Failed to copy\'); }});" '
+                'style="padding: 2px 6px; cursor: pointer; font-size: 11px; background: #417690; color: white; border: none; border-radius: 3px;">'
+                '📋 Copy</button>'
+                '</div>'
+                '<script>document.getElementById("{}").textContent = window.location.protocol + "//" + window.location.host + "{}";</script>',
+                button_id, button_id, button_id, url
             )
-        return '-'
-    copy_url_button.short_description = "Actions"
+        except Exception:
+            return '-'
+    copy_url_button.short_description = "CDN URL"
+
+    def view_file_link(self, obj):
+        """Show a link to view the file directly."""
+        if not obj or not obj.pk or not obj.slug:
+            return '-'
+
+        try:
+            url = obj.get_file_url()
+            return format_html(
+                '<a href="{}" target="_blank" style="color: #417690; text-decoration: none; font-weight: 500;">'
+                '🔗 Open</a>'
+                '<script>document.querySelectorAll(\'a[href="{}"]\').forEach(a => {{ '
+                'a.href = window.location.protocol + "//" + window.location.host + "{}"; '
+                '}});</script>',
+                url, url, url
+            )
+        except Exception:
+            return '-'
+    view_file_link.short_description = "View"
 
     def make_public(self, request, queryset):
         updated = queryset.update(is_public=True)

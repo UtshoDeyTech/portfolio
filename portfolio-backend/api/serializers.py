@@ -58,13 +58,24 @@ class HomeDataSerializer(serializers.ModelSerializer):
         """
         Transform the flat model structure into nested JSON for frontend.
         """
+        # Handle profile_image URL - convert relative to absolute
+        profile_image = instance.hero_profile_image
+        try:
+            if profile_image and profile_image.startswith('/'):
+                request = self.context.get('request') if hasattr(self, 'context') else None
+                if request:
+                    profile_image = request.build_absolute_uri(profile_image)
+        except Exception:
+            # If there's any error, just use the original value
+            pass
+
         return {
             'data': {
                 'hero': {
                     'name': instance.hero_name,
                     'tagline': instance.hero_tagline,
                     'bio': instance.hero_bio,
-                    'profile_image': instance.hero_profile_image,
+                    'profile_image': profile_image,
                     'resume_url': instance.hero_resume_url or None,
                     'cta_buttons': {
                         'primary': {
@@ -288,11 +299,25 @@ class MediaFileSerializer(serializers.ModelSerializer):
 
     def get_file_url(self, obj):
         """Returns the CDN URL for accessing this file."""
-        return obj.get_file_url()
+        try:
+            request = self.context.get('request') if hasattr(self, 'context') else None
+            relative_url = obj.get_file_url()
+            if request:
+                return request.build_absolute_uri(relative_url)
+            return relative_url
+        except Exception:
+            return obj.get_file_url()
 
     def get_api_url(self, obj):
         """Returns the API URL for accessing this file."""
-        return obj.get_api_url()
+        try:
+            request = self.context.get('request') if hasattr(self, 'context') else None
+            relative_url = obj.get_api_url()
+            if request:
+                return request.build_absolute_uri(relative_url)
+            return relative_url
+        except Exception:
+            return obj.get_api_url()
 
     def get_file_size_display(self, obj):
         """Returns human-readable file size."""
@@ -327,7 +352,14 @@ class MediaFileListSerializer(serializers.ModelSerializer):
         ]
 
     def get_file_url(self, obj):
-        return obj.get_file_url()
+        try:
+            request = self.context.get('request') if hasattr(self, 'context') else None
+            relative_url = obj.get_file_url()
+            if request:
+                return request.build_absolute_uri(relative_url)
+            return relative_url
+        except Exception:
+            return obj.get_file_url()
 
     def get_file_size_display(self, obj):
         return obj.get_file_size_display()

@@ -284,13 +284,31 @@ server {
     root FRONTEND_DIR_PLACEHOLDER/dist;
     index index.html;
 
-    # Frontend - serve static files directly (no proxy, faster!)
+    # Frontend - serve static files with smart caching
+    # HTML pages: cache for 6 hours, but check for updates (stale-while-revalidate)
     location / {
         try_files $uri $uri/ /index.html;
-        add_header Cache-Control "public, max-age=3600";
+
+        # HTML pages - revalidate every 6 hours
+        if ($request_uri ~* "\.html$|^/$") {
+            add_header Cache-Control "public, max-age=21600, stale-while-revalidate=86400, must-revalidate";
+        }
+
+        # JS/CSS assets - cache for 1 year (versioned files)
+        if ($request_uri ~* "\.(js|css|woff2|woff|ttf|eot)$") {
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        # Images - cache for 1 week
+        if ($request_uri ~* "\.(jpg|jpeg|png|gif|webp|svg|ico)$") {
+            add_header Cache-Control "public, max-age=604800";
+        }
+
+        # Default for HTML and other files
+        add_header Cache-Control "public, max-age=21600, stale-while-revalidate=86400, must-revalidate";
     }
 
-    # Backend API
+    # Backend API - Cache API responses for 6 hours
     location /api/ {
         proxy_pass http://backend/api/;
         proxy_set_header Host $host;
@@ -298,6 +316,13 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
+
+        # Cache API responses
+        add_header Cache-Control "public, max-age=21600, stale-while-revalidate=43200";
+
+        # Enable proxy caching
+        proxy_cache_bypass $http_pragma $http_authorization;
+        proxy_no_cache $http_pragma $http_authorization;
     }
 
     # Django Admin
@@ -401,6 +426,24 @@ else
 fi
 
 echo ""
+echo -e "${GREEN}Step 9: Setting Up Auto-Rebuild (Every 6 Hours)${NC}"
+echo "=========================================="
+
+# Make auto-rebuild script executable
+chmod +x "$PROJECT_DIR/auto-rebuild.sh"
+chown $ACTUAL_USER:$ACTUAL_USER "$PROJECT_DIR/auto-rebuild.sh"
+
+# Create cron job for auto-rebuild every 6 hours
+CRON_JOB="0 */6 * * * /bin/bash $PROJECT_DIR/auto-rebuild.sh"
+
+# Check if cron job already exists
+(crontab -l 2>/dev/null | grep -v "$PROJECT_DIR/auto-rebuild.sh"; echo "$CRON_JOB") | crontab -
+
+echo -e "${GREEN}✓ Auto-rebuild cron job configured${NC}"
+echo "  Schedule: Every 6 hours (at :00 minutes)"
+echo "  Log file: $PROJECT_DIR/auto-rebuild.log"
+
+echo ""
 echo "=================================="
 echo -e "${GREEN}✓ DEPLOYMENT COMPLETE!${NC}"
 echo "=================================="
@@ -419,15 +462,23 @@ echo "  Restart backend:  sudo systemctl restart portfolio-backend"
 echo "  Nginx status:     sudo systemctl status nginx"
 echo "  Nginx logs:       sudo tail -f /var/log/nginx/access.log"
 echo ""
+echo -e "${YELLOW}Auto-Rebuild:${NC}"
+echo "  View rebuild log: tail -f $PROJECT_DIR/auto-rebuild.log"
+echo "  Manual rebuild:   sudo bash $PROJECT_DIR/auto-rebuild.sh"
+echo "  View cron jobs:   crontab -l"
+echo ""
 echo -e "${YELLOW}Create Django superuser:${NC}"
 echo "  cd $BACKEND_DIR"
 echo "  source venv/bin/activate"
 echo "  python manage.py createsuperuser"
 echo ""
-echo -e "${GREEN}Key Fixes Applied:${NC}"
+echo -e "${GREEN}Key Features Configured:${NC}"
+echo "  ✓ Smart HTTP caching (6-hour expiry with stale-while-revalidate)"
+echo "  ✓ Automatic frontend rebuild every 6 hours"
+echo "  ✓ No manual cache clearing required for users"
 echo "  ✓ Static files path corrected (/static/ not /staticfiles/)"
 echo "  ✓ Frontend served directly by Nginx (no extra service needed)"
-echo "  ✓ Django admin CSS will now load correctly"
+echo "  ✓ Django admin CSS loads correctly"
 echo "  ✓ All backend endpoints accessible from frontend"
 echo "  ✓ CORS properly configured"
 echo ""
