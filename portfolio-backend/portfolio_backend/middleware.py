@@ -102,7 +102,7 @@ class RateLimitMiddleware:
             )
 
             # Reset count if outside time window
-            if not created and log_entry.last_request_at < time_window:
+            if not created and log_entry.last_request_at <= time_window:
                 log_entry.request_count = 0
                 log_entry.save()
 
