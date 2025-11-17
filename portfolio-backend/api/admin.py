@@ -282,7 +282,7 @@ class BlogAdmin(admin.ModelAdmin):
         try:
             # Run rebuild script in background
             subprocess.Popen(
-                ['bash', script_path],
+                ['/bin/bash', script_path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True
