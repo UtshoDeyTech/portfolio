@@ -451,11 +451,11 @@ class MediaFileAdmin(admin.ModelAdmin):
         'title_or_filename',
         'file_type',
         'file_preview',
-        'slug',
         'file_size_display_field',
         'is_public',
         'uploaded_at',
-        'copy_url_button'
+        'copy_url_button',
+        'view_file_link'
     )
 
     list_filter = (
@@ -626,18 +626,51 @@ class MediaFileAdmin(admin.ModelAdmin):
     api_url_display.short_description = "API URL"
 
     def copy_url_button(self, obj):
-        """Show a copy URL button in list view."""
-        if obj.slug:
+        """Show the CDN URL with a copy button in list view."""
+        if not obj or not obj.pk or not obj.slug:
+            return '-'
+
+        try:
             url = obj.get_file_url()
-            # Use JavaScript to construct absolute URL dynamically
+            # Create an ID for this specific button
+            button_id = f"url_{obj.id}"
+            # Show URL text and copy button
             return format_html(
-                '<button onclick="var fullUrl = window.location.protocol + \'//\' + window.location.host + \'{}\'; '
-                'navigator.clipboard.writeText(fullUrl); alert(\'URL copied: \' + fullUrl);" '
-                'style="padding: 4px 8px; cursor: pointer;">Copy URL</button>',
-                url
+                '<div style="display: flex; gap: 4px; align-items: center;">'
+                '<code id="{}" style="font-size: 11px; padding: 2px 4px; background: #f0f0f0; border-radius: 2px;"></code>'
+                '<button onclick="'
+                'var urlElem = document.getElementById(\'{}\'); '
+                'navigator.clipboard.writeText(urlElem.textContent).then(() => {{ '
+                'alert(\'✓ URL copied: \' + urlElem.textContent); '
+                '}}).catch(() => {{ alert(\'Failed to copy\'); }});" '
+                'style="padding: 2px 6px; cursor: pointer; font-size: 11px; background: #417690; color: white; border: none; border-radius: 3px;">'
+                '📋 Copy</button>'
+                '</div>'
+                '<script>document.getElementById("{}").textContent = window.location.protocol + "//" + window.location.host + "{}";</script>',
+                button_id, button_id, button_id, url
             )
-        return '-'
-    copy_url_button.short_description = "Actions"
+        except Exception:
+            return '-'
+    copy_url_button.short_description = "CDN URL"
+
+    def view_file_link(self, obj):
+        """Show a link to view the file directly."""
+        if not obj or not obj.pk or not obj.slug:
+            return '-'
+
+        try:
+            url = obj.get_file_url()
+            return format_html(
+                '<a href="{}" target="_blank" style="color: #417690; text-decoration: none; font-weight: 500;">'
+                '🔗 Open</a>'
+                '<script>document.querySelectorAll(\'a[href="{}"]\').forEach(a => {{ '
+                'a.href = window.location.protocol + "//" + window.location.host + "{}"; '
+                '}});</script>',
+                url, url, url
+            )
+        except Exception:
+            return '-'
+    view_file_link.short_description = "View"
 
     def make_public(self, request, queryset):
         updated = queryset.update(is_public=True)
