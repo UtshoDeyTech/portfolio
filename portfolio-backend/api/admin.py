@@ -408,55 +408,31 @@ class BlogAdmin(admin.ModelAdmin):
             return redirect(reverse('admin:api_blog_change', args=[object_id]))
 
     def preview_blog_view(self, request, object_id):
-        """Preview blog post as it would appear to users."""
-        from django.shortcuts import render, get_object_or_404
+        """Preview blog post by redirecting to the actual frontend page."""
+        from django.shortcuts import get_object_or_404, redirect
+        from django.contrib import messages
 
         try:
             blog = get_object_or_404(Blog, pk=object_id)
 
-            # Convert markdown to HTML using same extensions as the API serializer
-            content_html = ''
-            if blog.content_markdown:
-                try:
-                    import markdown
-                    md = markdown.Markdown(extensions=[
-                        'extra',      # Includes tables, fenced code blocks, etc.
-                        'codehilite', # Syntax highlighting for code blocks
-                        'toc',        # Table of contents
-                        'nl2br',      # Convert newlines to <br>
-                    ])
-                    content_html = md.convert(blog.content_markdown)
-                except ImportError:
-                    # Markdown library not available, use plain markdown text
-                    # Wrap in pre tag to preserve formatting
-                    content_html = f'<pre class="markdown-raw">{blog.content_markdown}</pre>'
+            # Get the frontend URL
+            frontend_url = request.build_absolute_uri('/').rstrip('/')
 
-            # If still no content, show a message
-            if not content_html:
-                content_html = '<p class="text-base-content/50 italic">No content available for preview.</p>'
-
-            # Prepare context similar to frontend
-            context = {
-                'blog': blog,
-                'title': blog.title,
-                'subtitle': blog.subtitle,
-                'excerpt': blog.excerpt,
-                'author': blog.author,
-                'published_date': blog.published_date,
-                'tags': blog.tags,
-                'cover_image': blog.cover_image,
-                'content_html': content_html,
-                'views': blog.views,
-                'likes': blog.likes,
-                'comments_count': blog.comments_count,
-                'read_time': blog.read_time,
-                'category': blog.category,
-                'allow_comments': blog.allow_comments,
-                'is_preview': True,
-                'preview_mode': True,
-            }
-
-            return render(request, 'admin/blog_preview.html', context)
+            if blog.is_published:
+                # Redirect to the actual frontend blog page (same page users see)
+                preview_url = f"{frontend_url}/blog/{blog.slug}"
+                return redirect(preview_url)
+            else:
+                # For unpublished posts, show helpful message
+                messages.warning(
+                    request,
+                    f'📝 This blog post is UNPUBLISHED. To preview it: '
+                    f'1) Mark as "Published", 2) Save, 3) Run deployment to rebuild frontend, '
+                    f'4) Then click preview. Or keep it unpublished and preview after publishing.'
+                )
+                # Redirect back to the change form
+                from django.urls import reverse
+                return redirect(reverse('admin:api_blog_change', args=[object_id]))
 
         except Blog.DoesNotExist:
             from django.http import Http404
