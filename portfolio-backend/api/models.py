@@ -396,9 +396,15 @@ def secure_file_upload_path(instance, filename):
     Generate a secure file path using UUID.
     Stores files in: secure_storage/<file_type>/<uuid>.<ext>
     """
-    ext = os.path.splitext(filename)[1].lower()  # Get file extension
-    unique_filename = f"{instance.uuid}{ext}"
-    return os.path.join('secure_storage', instance.file_type, unique_filename)
+    try:
+        ext = os.path.splitext(filename)[1].lower()  # Get file extension
+        unique_filename = f"{instance.uuid}{ext}"
+        # Use file_type if available, otherwise use 'other'
+        file_type = getattr(instance, 'file_type', 'other') or 'other'
+        return os.path.join('secure_storage', file_type, unique_filename)
+    except Exception:
+        # Fallback to simple path if anything fails
+        return os.path.join('secure_storage', f"{instance.uuid}_{filename}")
 
 
 class BackupRestore(models.Model):
@@ -471,12 +477,21 @@ class MediaFile(models.Model):
         if self.file and not self.original_filename:
             self.original_filename = os.path.basename(self.file.name)
 
-        # Calculate file size
+        # Calculate file size and detect MIME type
         if self.file:
             try:
                 self.file_size = self.file.size
             except (ValueError, OSError):
                 self.file_size = 0
+
+            # Detect MIME type if not set
+            if not self.mime_type:
+                import mimetypes
+                mime_type, _ = mimetypes.guess_type(self.file.name)
+                if mime_type:
+                    self.mime_type = mime_type
+                else:
+                    self.mime_type = 'application/octet-stream'
 
         super().save(*args, **kwargs)
 
