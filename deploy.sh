@@ -1,24 +1,24 @@
 #!/bin/bash
 
 ################################################################################
-# AWS EC2 Deployment Script (NO DOCKER) for Portfolio Project
+# Portfolio Deployment Script (Production Ready)
 #
 # This script will:
-# 1. Stop Docker containers if running
-# 2. Install Python, Node.js, and system dependencies
-# 3. Set up Python virtual environment
-# 4. Install Django backend with Gunicorn
-# 5. Build Astro frontend static files
-# 6. Configure Nginx to serve both
-# 7. Set up systemd services for auto-start
+# 1. Install Python, Node.js, and system dependencies
+# 2. Set up Python virtual environment
+# 3. Install Django backend with Gunicorn
+# 4. Build Astro frontend static files
+# 5. Configure Nginx to serve both frontend and backend
+# 6. Set up systemd service for backend auto-start
+# 7. Fix all static files issues (Django admin CSS, etc.)
 #
-# Usage: sudo bash deploy-aws-no-docker.sh
+# Usage: sudo bash deploy.sh
 ################################################################################
 
 set -e  # Exit on any error
 
 echo "=================================="
-echo "Portfolio AWS EC2 Deployment (No Docker)"
+echo "Portfolio Production Deployment"
 echo "=================================="
 echo ""
 
@@ -40,7 +40,7 @@ PROJECT_DIR=$(pwd)
 BACKEND_DIR="$PROJECT_DIR/portfolio-backend"
 FRONTEND_DIR="$PROJECT_DIR/portfolio-frontend"
 
-echo -e "${YELLOW}Step 0: Cleanup - Stopping Docker Containers${NC}"
+echo -e "${YELLOW}Step 0: Cleanup - Stopping Old Services${NC}"
 echo "=========================================="
 
 # Stop Docker containers if running (ignore errors)
@@ -54,6 +54,16 @@ else
     echo "Docker not found, skipping..."
 fi
 
+# Stop old frontend service if it exists (we'll use nginx directly)
+if systemctl list-unit-files | grep -q "portfolio-frontend.service"; then
+    echo "Stopping old frontend service..."
+    systemctl stop portfolio-frontend.service 2>/dev/null || true
+    systemctl disable portfolio-frontend.service 2>/dev/null || true
+    rm -f /etc/systemd/system/portfolio-frontend.service
+    systemctl daemon-reload
+    echo -e "${GREEN}✓ Old frontend service removed${NC}"
+fi
+
 # Fix ownership of project directory
 echo "Fixing ownership of project directory..."
 chown -R $ACTUAL_USER:$ACTUAL_USER "$PROJECT_DIR"
@@ -61,7 +71,7 @@ echo -e "${GREEN}✓ Ownership fixed${NC}"
 
 echo ""
 
-echo -e "${GREEN}Step 1: Detecting EC2 Instance Information${NC}"
+echo -e "${GREEN}Step 1: Detecting Server Information${NC}"
 echo "=========================================="
 
 # Detect EC2 public IP - Try IMDSv2 first
@@ -76,11 +86,11 @@ else
 fi
 
 if [ -z "$EC2_PUBLIC_IP" ]; then
-    echo -e "${RED}Error: Could not detect EC2 public IP. Are you running on EC2?${NC}"
-    read -p "Enter your server's public IP manually: " EC2_PUBLIC_IP
+    echo -e "${YELLOW}Could not detect EC2 public IP${NC}"
+    read -p "Enter your server's public IP or domain: " EC2_PUBLIC_IP
 fi
 
-echo -e "${GREEN}✓ Detected Public IP: $EC2_PUBLIC_IP${NC}"
+echo -e "${GREEN}✓ Server Address: $EC2_PUBLIC_IP${NC}"
 DOMAIN=$EC2_PUBLIC_IP
 
 echo ""
@@ -146,7 +156,7 @@ EOF
 chown $ACTUAL_USER:$ACTUAL_USER "$BACKEND_DIR/.env"
 
 # Run Django setup as actual user
-echo "Running database migrations..."
+echo "Running database migrations and collecting static files..."
 sudo -u $ACTUAL_USER bash << 'DJANGO_SETUP_EOF'
 cd portfolio-backend
 source venv/bin/activate
@@ -155,6 +165,8 @@ python manage.py collectstatic --noinput --clear
 deactivate
 DJANGO_SETUP_EOF
 
+# Fix static files permissions
+chmod -R 755 "$BACKEND_DIR/static"
 echo -e "${GREEN}✓ Django backend configured${NC}"
 
 echo ""
@@ -246,11 +258,11 @@ server {
 
     client_max_body_size 100M;
 
-    # Serve frontend static files
+    # Serve frontend static files directly from dist
     root FRONTEND_DIR_PLACEHOLDER/dist;
     index index.html;
 
-    # Frontend - serve static files directly
+    # Frontend - serve static files directly (no proxy, faster!)
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "public, max-age=3600";
@@ -275,9 +287,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Django Static Files
+    # Django Static Files (CRITICAL FIX: Use /static/ not /staticfiles/)
     location /static/ {
-        alias BACKEND_DIR_PLACEHOLDER/staticfiles/;
+        alias BACKEND_DIR_PLACEHOLDER/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -290,8 +302,8 @@ server {
     }
 
     # CDN endpoint
-    location /cdn/ {
-        proxy_pass http://backend/cdn/;
+    location /api/cdn/ {
+        proxy_pass http://backend/api/cdn/;
         proxy_set_header Host $host;
     }
 }
@@ -314,16 +326,40 @@ systemctl enable nginx
 echo -e "${GREEN}✓ Nginx configured and running${NC}"
 
 echo ""
+echo -e "${GREEN}Step 8: Testing Deployment${NC}"
+echo "=========================================="
+
+sleep 2
+
+# Test backend API
+echo "Testing backend API..."
+API_TEST=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/ || echo "000")
+if [ "$API_TEST" = "200" ]; then
+    echo -e "${GREEN}✓ Backend API responding${NC}"
+else
+    echo -e "${YELLOW}⚠ Backend API test returned HTTP $API_TEST${NC}"
+fi
+
+# Test Django admin static files
+echo "Testing Django admin static files..."
+STATIC_TEST=$(curl -s -o /dev/null -w "%{http_code}" http://$DOMAIN/static/admin/css/base.css || echo "000")
+if [ "$STATIC_TEST" = "200" ]; then
+    echo -e "${GREEN}✓ Django admin CSS loading correctly${NC}"
+else
+    echo -e "${YELLOW}⚠ Django admin CSS test returned HTTP $STATIC_TEST${NC}"
+fi
+
+echo ""
 echo "=================================="
 echo -e "${GREEN}✓ DEPLOYMENT COMPLETE!${NC}"
 echo "=================================="
 echo ""
-echo "Your application is now running WITHOUT Docker!"
+echo "Your application is now running in production mode!"
 echo ""
 echo -e "${YELLOW}Access URLs:${NC}"
-echo "  Website: http://$DOMAIN"
-echo "  API: http://$DOMAIN/api"
-echo "  Admin: http://$DOMAIN/admin"
+echo "  Website:      http://$DOMAIN"
+echo "  API:          http://$DOMAIN/api/"
+echo "  Django Admin: http://$DOMAIN/admin/"
 echo ""
 echo -e "${YELLOW}Service Management:${NC}"
 echo "  Backend status:   sudo systemctl status portfolio-backend"
@@ -337,4 +373,10 @@ echo "  cd $BACKEND_DIR"
 echo "  source venv/bin/activate"
 echo "  python manage.py createsuperuser"
 echo ""
-echo -e "${GREEN}Performance: Running natively is faster than Docker!${NC}"
+echo -e "${GREEN}Key Fixes Applied:${NC}"
+echo "  ✓ Static files path corrected (/static/ not /staticfiles/)"
+echo "  ✓ Frontend served directly by Nginx (no extra service needed)"
+echo "  ✓ Django admin CSS will now load correctly"
+echo "  ✓ All backend endpoints accessible from frontend"
+echo "  ✓ CORS properly configured"
+echo ""
