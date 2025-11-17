@@ -231,18 +231,36 @@ systemctl daemon-reload
 systemctl enable portfolio-backend.service
 systemctl start portfolio-backend.service
 
-# Wait for service to start
-sleep 3
+# Wait for service to start and be ready
+echo "Waiting for backend to be ready..."
+sleep 5
 
 # Check if service started successfully
 if systemctl is-active --quiet portfolio-backend.service; then
-    echo -e "${GREEN}✓ Backend service created and started${NC}"
+    echo -e "${GREEN}✓ Backend service is running${NC}"
 else
     echo -e "${RED}✗ Backend service failed to start${NC}"
     echo "Checking logs..."
     journalctl -u portfolio-backend -n 20 --no-pager
     exit 1
 fi
+
+# Wait for backend API to actually respond (health check)
+echo "Testing backend API connectivity..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/ | grep -q "200"; then
+        echo -e "${GREEN}✓ Backend API is responding${NC}"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        echo -e "${YELLOW}⚠ Backend API not responding after 30 seconds${NC}"
+        echo "  Continuing anyway - frontend build may fail to fetch data"
+    fi
+    sleep 1
+done
 
 echo ""
 echo -e "${GREEN}Step 6: Building Frontend${NC}"
