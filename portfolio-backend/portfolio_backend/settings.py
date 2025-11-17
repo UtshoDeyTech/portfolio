@@ -33,9 +33,9 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'portfolio_backend.middleware.APICacheMiddleware',  # Add HTTP caching for API endpoints
-    'portfolio_backend.middleware.RateLimitMiddleware',  # Add rate limiting
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'portfolio_backend.middleware.RateLimitMiddleware',  # Add rate limiting (MUST be after AuthenticationMiddleware)
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
