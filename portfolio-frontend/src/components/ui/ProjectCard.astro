@@ -74,16 +74,6 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
 
     <!-- Header Block: Title, Role, Organization, and Key Metrics -->
     <div class='p-4 sm:p-6 bg-base-200/50 border-b border-base-300/80'>
-
-      {/* Expand/Collapse Button */}
-      <button
-        class='expand-btn absolute top-4 right-4 p-2 hover:bg-base-100 rounded-lg transition-colors z-10'
-        aria-label='Toggle details'
-      >
-        <svg class='w-6 h-6 text-base-content/70 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
-        </svg>
-      </button>
       <div class='flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4'>
         
         <!-- Type Badge (Prominent) -->
@@ -138,6 +128,19 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
             <progress class={`progress progress-success w-full h-2`} value={accuracyPercentage} max="100"></progress>
         </div>
       )}
+
+      <!-- Expand/Collapse Button -->
+      <div class='px-4 sm:px-6 pb-4 sm:pb-6'>
+        <button
+          class='expand-btn w-full py-3 px-4 bg-base-100 hover:bg-base-200 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm font-medium text-base-content/70 hover:text-base-content border border-base-300/50 hover:border-primary/30'
+          aria-label='Toggle details'
+        >
+          <span class='expand-text'>Show Details</span>
+          <svg class='expand-icon w-5 h-5 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Collapsible Details Section -->
@@ -333,7 +336,8 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
     wrappers.forEach(wrapper => {
       const expandBtn = wrapper.querySelector('.expand-btn');
       const detailsContent = wrapper.querySelector('.details-content');
-      const chevron = expandBtn?.querySelector('svg');
+      const expandIcon = expandBtn?.querySelector('.expand-icon');
+      const expandText = expandBtn?.querySelector('.expand-text');
       const card = wrapper.querySelector('.project-card');
 
       if (!expandBtn || !detailsContent) return;
@@ -346,12 +350,14 @@ const accuracyPercentage = getAccuracyPercentage(item.accuracy);
           // Collapse
           card?.classList.remove('expanded');
           detailsContent.style.maxHeight = '0';
-          if (chevron) chevron.style.transform = 'rotate(0deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+          if (expandText) expandText.textContent = 'Show Details';
         } else {
           // Expand
           card?.classList.add('expanded');
           detailsContent.style.maxHeight = detailsContent.scrollHeight + 'px';
-          if (chevron) chevron.style.transform = 'rotate(180deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(180deg)';
+          if (expandText) expandText.textContent = 'Hide Details';
         }
       });
     });

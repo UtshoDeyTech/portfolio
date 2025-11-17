@@ -37,7 +37,7 @@ const dateRange = hasStartDate || hasEndDate
 
     <!-- Current badge -->
     {item.is_current && (
-        <div class='absolute top-4 right-14 z-10'>
+        <div class='absolute top-4 right-4 z-10'>
             <span class='inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full'>
                 <span class='w-1.5 h-1.5 bg-primary rounded-full animate-pulse-subtle'></span>
                 Current
@@ -80,16 +80,6 @@ const dateRange = hasStartDate || hasEndDate
                     </p>
                 )}
             </div>
-
-            {/* Expand/Collapse Button */}
-            <button
-                class='expand-btn flex-shrink-0 p-2 hover:bg-base-200 rounded-lg transition-colors'
-                aria-label='Toggle details'
-            >
-                <svg class='w-6 h-6 text-base-content/70 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                    <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
-                </svg>
-            </button>
         </div>
 
         <!-- Metadata Section (Date, Location, Grade) -->
@@ -123,6 +113,17 @@ const dateRange = hasStartDate || hasEndDate
                 </span>
             )}
         </div>
+
+        <!-- Expand/Collapse Button -->
+        <button
+            class='expand-btn w-full mt-4 py-3 px-4 bg-base-200/50 hover:bg-base-200 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm font-medium text-base-content/70 hover:text-base-content border border-base-300/50 hover:border-primary/30'
+            aria-label='Toggle details'
+        >
+            <span class='expand-text'>Show Details</span>
+            <svg class='expand-icon w-5 h-5 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
+            </svg>
+        </button>
     </div>
 
     <!-- Collapsible Details Section -->
@@ -182,7 +183,8 @@ const dateRange = hasStartDate || hasEndDate
     cards.forEach(card => {
       const expandBtn = card.querySelector('.expand-btn');
       const detailsContent = card.querySelector('.details-content');
-      const chevron = expandBtn?.querySelector('svg');
+      const expandIcon = expandBtn?.querySelector('.expand-icon');
+      const expandText = expandBtn?.querySelector('.expand-text');
 
       if (!expandBtn || !detailsContent) return;
 
@@ -194,12 +196,14 @@ const dateRange = hasStartDate || hasEndDate
           // Collapse
           card.classList.remove('expanded');
           detailsContent.style.maxHeight = '0';
-          if (chevron) chevron.style.transform = 'rotate(0deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+          if (expandText) expandText.textContent = 'Show Details';
         } else {
           // Expand
           card.classList.add('expanded');
           detailsContent.style.maxHeight = detailsContent.scrollHeight + 'px';
-          if (chevron) chevron.style.transform = 'rotate(180deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(180deg)';
+          if (expandText) expandText.textContent = 'Hide Details';
         }
       });
     });

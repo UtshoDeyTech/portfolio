@@ -1,0 +1,61 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+
+{% if original %}
+<div class="submit-row" style="margin-top: 15px; padding: 12px 14px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px;">
+    <p style="margin: 0 0 12px 0; font-weight: bold; color: #333;">
+        📦 JSON Import/Export
+    </p>
+
+    <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
+        <!-- Download JSON Button -->
+        <div style="flex: 1; min-width: 250px;">
+            <a href="{% url 'admin:api_blog_download_json' original.pk %}"
+               class="button"
+               style="display: inline-block; padding: 8px 16px; background: #417690; color: white; text-decoration: none; border-radius: 4px; font-weight: 500;">
+                📥 Download as JSON
+            </a>
+            <p style="margin: 8px 0 0 0; font-size: 11px; color: #666;">
+                Download this blog post as a JSON file for backup or sharing.
+            </p>
+        </div>
+
+        <!-- Upload JSON Form -->
+        <div style="flex: 1; min-width: 250px;">
+            <form method="post"
+                  action="{% url 'admin:api_blog_upload_json' original.pk %}"
+                  enctype="multipart/form-data"
+                  style="margin: 0;"
+                  onsubmit="return confirm('This will replace all blog content with data from the JSON file. Are you sure?');">
+                {% csrf_token %}
+                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                    <input type="file"
+                           name="json_file"
+                           accept=".json,application/json"
+                           required
+                           style="padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; flex: 1;">
+                    <button type="submit"
+                            class="button"
+                            style="padding: 8px 16px; background: #ba2121; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; white-space: nowrap;">
+                        📤 Upload JSON
+                    </button>
+                </div>
+                <p style="margin: 0; font-size: 11px; color: #666;">
+                    Select a JSON file to update all blog content fields.
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div style="margin-top: 12px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+        <p style="margin: 0; font-size: 12px; color: #856404;">
+            <strong>⚠️ Important:</strong> The upload function will overwrite all fields in this blog post with data from the JSON file. Make sure to download a backup first!
+        </p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

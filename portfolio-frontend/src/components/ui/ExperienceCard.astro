@@ -67,7 +67,7 @@ const getEmploymentTypeStyle = (type: string) => {
 
   <!-- Active Job Indicator -->
   {item.is_current && (
-    <div class="absolute top-2 right-14 z-20">
+    <div class="absolute top-2 right-2 z-20">
       <span class="px-3 py-1 text-xs font-semibold rounded-full bg-primary text-primary-content shadow-md">
         Active
       </span>
@@ -79,16 +79,6 @@ const getEmploymentTypeStyle = (type: string) => {
 
     <!-- Header Block: Role, Company, and Logo (if exists) -->
     <div class='relative p-4 sm:p-6 bg-base-200/50 border-b border-base-300/80'>
-
-      {/* Expand/Collapse Button */}
-      <button
-        class='expand-btn absolute top-4 right-4 p-2 hover:bg-base-100 rounded-lg transition-colors z-10'
-        aria-label='Toggle details'
-      >
-        <svg class='w-6 h-6 text-base-content/70 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-          <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
-        </svg>
-      </button>
 
       <!-- Company Logo as a prominent badge -->
       {hasLogo && (
@@ -152,6 +142,19 @@ const getEmploymentTypeStyle = (type: string) => {
             {item.location} ({item.work_mode})
           </span>
         )}
+      </div>
+
+      <!-- Expand/Collapse Button -->
+      <div class='px-4 sm:px-6 pb-4 sm:pb-6'>
+        <button
+          class='expand-btn w-full py-3 px-4 bg-base-100 hover:bg-base-200 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm font-medium text-base-content/70 hover:text-base-content border border-base-300/50 hover:border-primary/30'
+          aria-label='Toggle details'
+        >
+          <span class='expand-text'>Show Details</span>
+          <svg class='expand-icon w-5 h-5 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -225,7 +228,8 @@ const getEmploymentTypeStyle = (type: string) => {
     items.forEach(item => {
       const expandBtn = item.querySelector('.expand-btn');
       const detailsContent = item.querySelector('.details-content');
-      const chevron = expandBtn?.querySelector('svg');
+      const expandIcon = expandBtn?.querySelector('.expand-icon');
+      const expandText = expandBtn?.querySelector('.expand-text');
 
       if (!expandBtn || !detailsContent) return;
 
@@ -238,12 +242,14 @@ const getEmploymentTypeStyle = (type: string) => {
           // Collapse
           card?.classList.remove('expanded');
           detailsContent.style.maxHeight = '0';
-          if (chevron) chevron.style.transform = 'rotate(0deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+          if (expandText) expandText.textContent = 'Show Details';
         } else {
           // Expand
           card?.classList.add('expanded');
           detailsContent.style.maxHeight = detailsContent.scrollHeight + 'px';
-          if (chevron) chevron.style.transform = 'rotate(180deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(180deg)';
+          if (expandText) expandText.textContent = 'Hide Details';
         }
       });
     });
