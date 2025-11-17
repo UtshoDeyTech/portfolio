@@ -492,24 +492,40 @@ const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1]
             window.addEventListener('scroll', updateProgress);
             updateProgress();
 
-            // Generate Table of Contents
-            const tocContainer = document.getElementById('toc');
-            if (tocContainer) {
-                const headings = document.querySelectorAll('.prose h2, .prose h3');
-                
+            // Generate Table of Contents - Improved version
+            const generateTOC = () => {
+                const tocContainer = document.getElementById('toc');
+                if (!tocContainer) return;
+
+                // Clear existing TOC
+                tocContainer.innerHTML = '';
+
+                // Find all headings in the prose content
+                // Try multiple selectors to ensure we catch the headings
+                const headings = document.querySelectorAll('.prose h2, .prose h3, article h2, article h3, [class*="prose"] h2, [class*="prose"] h3');
+
                 if (headings.length > 0) {
                     headings.forEach((heading, index) => {
+                        // Skip if heading is empty
+                        if (!heading.textContent.trim()) return;
+
                         // Add ID to heading if it doesn't have one
                         if (!heading.id) {
-                            heading.id = `heading-${index}`;
+                            // Create a slug from the heading text
+                            const slug = heading.textContent
+                                .toLowerCase()
+                                .replace(/[^\w\s-]/g, '')
+                                .replace(/\s+/g, '-')
+                                .substring(0, 50);
+                            heading.id = slug || `heading-${index}`;
                         }
-                        
+
                         const level = heading.tagName === 'H2' ? 0 : 1;
                         const link = document.createElement('a');
                         link.href = `#${heading.id}`;
                         link.textContent = heading.textContent;
-                        link.className = `block py-1 text-base-content/70 hover:text-primary transition-colors ${level === 1 ? 'pl-4 text-xs' : 'font-medium'}`;
-                        
+                        link.className = `block py-1.5 text-base-content/70 hover:text-primary transition-normal ${level === 1 ? 'pl-4 text-sm' : 'font-medium text-sm'}`;
+
                         tocContainer.appendChild(link);
                     });
 
@@ -517,16 +533,23 @@ const nextPost = currentIndex < allPosts.length - 1 ? allPosts[currentIndex + 1]
                     tocContainer.querySelectorAll('a').forEach(link => {
                         link.addEventListener('click', (e) => {
                             e.preventDefault();
-                            const target = document.querySelector(link.getAttribute('href'));
+                            const targetId = link.getAttribute('href');
+                            const target = document.querySelector(targetId);
                             if (target) {
-                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                const offset = 80; // Account for fixed header
+                                const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
+                                window.scrollTo({ top: targetPosition, behavior: 'smooth' });
                             }
                         });
                     });
                 } else {
-                    tocContainer.innerHTML = '<p class="text-sm text-base-content/50">No headings found</p>';
+                    tocContainer.innerHTML = '<p class="text-sm text-base-content/50 italic">No headings in this article</p>';
                 }
-            }
+            };
+
+            // Generate TOC immediately and after a short delay to ensure content is loaded
+            generateTOC();
+            setTimeout(generateTOC, 100);
 
             // Copy link button
             const copyBtn = document.getElementById('copy-link-btn') as HTMLButtonElement | null;
