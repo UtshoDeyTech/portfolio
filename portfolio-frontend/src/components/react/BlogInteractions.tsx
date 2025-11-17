@@ -19,14 +19,15 @@ interface ViewStats {
 }
 
 export default function BlogInteractions({ slug, initialViews, initialLikes }: BlogInteractionsProps) {
-  const [views, setViews] = useState(initialViews);
-  const [likes, setLikes] = useState(initialLikes);
+  const [views, setViews] = useState(0);  // Start at 0, will be updated from API
+  const [likes, setLikes] = useState(0);  // Start at 0, will be updated from API
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [fingerprint, setFingerprint] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [timeTracker, setTimeTracker] = useState<TimeTracker | null>(null);
   const [viewStats, setViewStats] = useState<ViewStats>({ has_viewed: false });
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get fingerprint on mount
   useEffect(() => {
@@ -34,6 +35,36 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
     setFingerprint(identifier.fingerprint);
     setSessionId(identifier.sessionId);
   }, []);
+
+  // Fetch fresh blog data on mount (views, likes)
+  useEffect(() => {
+    const fetchBlogData = async () => {
+      try {
+        const response = await fetch(`${getApiUrl()}/api/blog-posts/${slug}/`, {
+          cache: 'no-store',  // Force fresh data, never use cache
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setViews(data.views || 0);
+          setLikes(data.likes || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching blog data:', error);
+        // Fallback to initial props if API fails
+        setViews(initialViews);
+        setLikes(initialLikes);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBlogData();
+  }, [slug, initialViews, initialLikes]);
 
   // Initialize time tracking
   useEffect(() => {
@@ -81,11 +112,14 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
     };
 
     incrementView();
+  }, [slug, fingerprint, sessionId]);
 
-    // Check if user has already liked this post (from localStorage)
+  // Check like status from localStorage on mount
+  useEffect(() => {
+    // Check if user has already liked this post (from localStorage for quick UI update)
     const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
     setIsLiked(likedPosts.includes(slug));
-  }, [slug, fingerprint, sessionId]);
+  }, [slug]);
 
   // Fetch view stats periodically
   useEffect(() => {
@@ -157,6 +191,8 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
 
       if (response.ok) {
         const data = await response.json();
+
+        // Update likes count and liked state from server response
         setLikes(data.likes);
         setIsLiked(data.is_liked);
 
@@ -176,6 +212,10 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
         // CACHE BUSTER: Clear browser cache for this blog post
         // This ensures when user refreshes, they see updated data
         bustBlogCache();
+
+        console.log(`✓ Like toggled: ${data.is_liked ? 'liked' : 'unliked'}, total likes: ${data.likes}`);
+      } else {
+        console.error('Failed to toggle like:', response.status);
       }
     } catch (error) {
       console.error('Error toggling like:', error);
@@ -209,16 +249,16 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
             <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"></path>
           </svg>
-          <span>{views} views</span>
+          <span className={isLoading ? 'opacity-50' : ''}>{views} views</span>
         </div>
 
         {/* Likes - Interactive */}
         <button
           onClick={handleToggleLike}
-          disabled={isLiking}
+          disabled={isLiking || isLoading}
           className={`flex items-center gap-1 transition-colors ${
             isLiked ? 'text-red-500' : 'hover:text-red-500'
-          } ${isLiking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          } ${isLiking || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           aria-label={isLiked ? 'Unlike this post' : 'Like this post'}
         >
           <svg
@@ -234,7 +274,7 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
               clipRule="evenodd"
             ></path>
           </svg>
-          <span>{likes} likes</span>
+          <span className={isLoading ? 'opacity-50' : ''}>{likes} likes</span>
         </button>
       </div>
 
