@@ -5,6 +5,24 @@
 {{ block.super }}
 
 {% if original %}
+<!-- Preview Button Section -->
+<div class="submit-row" style="margin-top: 15px; padding: 12px 14px; background: #e7f3ff; border: 1px solid #2196F3; border-radius: 4px;">
+    <p style="margin: 0 0 12px 0; font-weight: bold; color: #0d47a1;">
+        👁️ Blog Post Preview
+    </p>
+    <a href="{% url 'admin:api_blog_preview' original.pk %}"
+       target="_blank"
+       class="button"
+       style="display: inline-block; padding: 10px 20px; background: #2196F3; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 14px;">
+        🔍 Preview as User
+    </a>
+    <p style="margin: 12px 0 0 0; font-size: 12px; color: #1565c0;">
+        <strong>💡 Tip:</strong> Click to see exactly how this blog post will look to your readers.
+        Works for both published and unpublished posts!
+    </p>
+</div>
+
+<!-- JSON Import/Export Section -->
 <div class="submit-row" style="margin-top: 15px; padding: 12px 14px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px;">
     <p style="margin: 0 0 12px 0; font-weight: bold; color: #333;">
         📦 JSON Import/Export
