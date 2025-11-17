@@ -410,20 +410,29 @@ class BlogAdmin(admin.ModelAdmin):
     def preview_blog_view(self, request, object_id):
         """Preview blog post as it would appear to users."""
         from django.shortcuts import render, get_object_or_404
-        from django.utils.html import escape
-        import markdown
 
         try:
             blog = get_object_or_404(Blog, pk=object_id)
 
-            # Convert markdown to HTML if needed
+            # Get HTML content (prefer existing content_html)
             content_html = blog.content_html
+
+            # If no HTML content but markdown exists, try to convert
             if not content_html and blog.content_markdown:
-                # Use markdown library to convert
-                content_html = markdown.markdown(
-                    blog.content_markdown,
-                    extensions=['extra', 'codehilite', 'fenced_code', 'tables']
-                )
+                try:
+                    import markdown
+                    content_html = markdown.markdown(
+                        blog.content_markdown,
+                        extensions=['extra', 'codehilite', 'fenced_code', 'tables']
+                    )
+                except ImportError:
+                    # Markdown library not available, use plain markdown text
+                    # Wrap in pre tag to preserve formatting
+                    content_html = f'<pre class="markdown-raw">{blog.content_markdown}</pre>'
+
+            # If still no content, show a message
+            if not content_html:
+                content_html = '<p class="text-base-content/50 italic">No content available for preview.</p>'
 
             # Prepare context similar to frontend
             context = {
