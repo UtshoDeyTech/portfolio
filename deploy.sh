@@ -170,27 +170,7 @@ chmod -R 755 "$BACKEND_DIR/static"
 echo -e "${GREEN}✓ Django backend configured${NC}"
 
 echo ""
-echo -e "${GREEN}Step 5: Building Frontend${NC}"
-echo "=========================================="
-
-# Build frontend as actual user
-echo "Installing Node.js dependencies and building..."
-sudo -u $ACTUAL_USER bash << FRONTEND_EOF
-cd "$FRONTEND_DIR"
-
-# Set build-time environment variables
-export PUBLIC_API_URL="http://$DOMAIN"
-export SERVER_API_URL="http://127.0.0.1:8000"
-
-# Install dependencies and build
-npm ci
-npm run build
-FRONTEND_EOF
-
-echo -e "${GREEN}✓ Frontend built successfully${NC}"
-
-echo ""
-echo -e "${GREEN}Step 6: Creating Systemd Service for Backend${NC}"
+echo -e "${GREEN}Step 5: Creating Systemd Service for Backend${NC}"
 echo "=========================================="
 
 # Create systemd service for Gunicorn
@@ -241,6 +221,26 @@ else
     journalctl -u portfolio-backend -n 20 --no-pager
     exit 1
 fi
+
+echo ""
+echo -e "${GREEN}Step 6: Building Frontend${NC}"
+echo "=========================================="
+
+# Build frontend as actual user
+echo "Installing Node.js dependencies and building..."
+sudo -u $ACTUAL_USER bash << FRONTEND_EOF
+cd "$FRONTEND_DIR"
+
+# Set build-time environment variables
+export PUBLIC_API_URL="http://$DOMAIN"
+export SERVER_API_URL="http://127.0.0.1:8000"
+
+# Install dependencies and build
+npm ci
+npm run build
+FRONTEND_EOF
+
+echo -e "${GREEN}✓ Frontend built successfully${NC}"
 
 echo ""
 echo -e "${GREEN}Step 7: Configuring Nginx${NC}"
