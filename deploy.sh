@@ -342,8 +342,8 @@ server {
         expires -1;
     }
 
-    # Backend API - Short cache for blog detail (admin can update anytime)
-    # Cache for only 2 minutes so admin updates show quickly
+    # Backend API - NO cache for blog detail (always fresh data)
+    # Immediate updates for likes, views, and content changes
     location ~ ^/api/blog-posts/[^/]+/?$ {
         proxy_pass http://backend;
         proxy_set_header Host $host;
@@ -352,9 +352,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
 
-        # Short cache for blog detail - 2 minutes
-        # This allows admin updates to show quickly
-        add_header Cache-Control "public, max-age=120, must-revalidate";
+        # NO caching - always fetch fresh data
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        add_header Pragma "no-cache";
+        expires -1;
     }
 
     # Backend API - Cache read-only GET requests (lists, static data)
