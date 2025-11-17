@@ -242,8 +242,8 @@ class BlogAdmin(admin.ModelAdmin):
         })
     )
 
-    # Add action to mark blogs as trending
-    actions = ['mark_as_trending', 'unmark_as_trending', 'publish_blogs', 'unpublish_blogs']
+    # Add action to mark blogs as trending and rebuild frontend
+    actions = ['mark_as_trending', 'unmark_as_trending', 'publish_blogs', 'unpublish_blogs', 'rebuild_frontend']
 
     def mark_as_trending(self, request, queryset):
         updated = queryset.update(is_trending=True)
@@ -264,6 +264,41 @@ class BlogAdmin(admin.ModelAdmin):
         updated = queryset.update(is_published=False)
         self.message_user(request, f'{updated} blog(s) unpublished.')
     unpublish_blogs.short_description = "Unpublish selected blogs"
+
+    def rebuild_frontend(self, request, queryset):
+        """
+        Trigger frontend rebuild to update static site with latest blog content.
+        This runs the auto-rebuild script in the background.
+        """
+        import subprocess
+        import os
+
+        script_path = "/home/ubuntu/portfolio/auto-rebuild.sh"
+
+        if not os.path.exists(script_path):
+            self.message_user(request, f'⚠ Rebuild script not found at {script_path}', level='error')
+            return
+
+        try:
+            # Run rebuild script in background
+            subprocess.Popen(
+                ['bash', script_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+
+            self.message_user(
+                request,
+                '🔄 Frontend rebuild started in background. '
+                'It will take 30-60 seconds to complete. '
+                'Refresh the website after a minute to see changes.',
+                level='success'
+            )
+        except Exception as e:
+            self.message_user(request, f'❌ Failed to start rebuild: {e}', level='error')
+
+    rebuild_frontend.short_description = "🔄 Rebuild Frontend (Update Website)"
 
     def get_urls(self):
         """Add custom URLs for download/upload JSON and preview."""
