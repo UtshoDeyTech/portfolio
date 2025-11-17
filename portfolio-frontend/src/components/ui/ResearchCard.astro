@@ -77,17 +77,7 @@ const getTypeColor = (): string => {
 ---
 
 <article class='research-card bg-base-100 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 border-t-4 border-primary/70 border-2 border-base-300 overflow-hidden mb-6'>
-  <div class='p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 relative'>
-
-    {/* Expand/Collapse Button */}
-    <button
-      class='expand-btn absolute top-4 right-4 p-2 hover:bg-base-200 rounded-lg transition-colors z-10'
-      aria-label='Toggle details'
-    >
-      <svg class='w-6 h-6 text-base-content/70 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-        <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
-      </svg>
-    </button>
+  <div class='p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4'>
 
     {data.hasCoverImage && (
       <div class='w-full h-44 overflow-hidden rounded-lg mb-3'>
@@ -163,6 +153,17 @@ const getTypeColor = (): string => {
         </div>
       )}
     </div>
+
+    <!-- Expand/Collapse Button -->
+    <button
+      class='expand-btn w-full mt-4 py-3 px-4 bg-base-200/50 hover:bg-base-200 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-sm font-medium text-base-content/70 hover:text-base-content border border-base-300/50 hover:border-primary/30'
+      aria-label='Toggle details'
+    >
+      <span class='expand-text'>Show Details</span>
+      <svg class='expand-icon w-5 h-5 transition-transform duration-300' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+        <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'></path>
+      </svg>
+    </button>
   </div>
 
   <!-- Collapsible Details Section -->
@@ -405,7 +406,8 @@ const getTypeColor = (): string => {
     cards.forEach(card => {
       const expandBtn = card.querySelector('.expand-btn');
       const detailsContent = card.querySelector('.details-content');
-      const chevron = expandBtn?.querySelector('svg');
+      const expandIcon = expandBtn?.querySelector('.expand-icon');
+      const expandText = expandBtn?.querySelector('.expand-text');
 
       if (!expandBtn || !detailsContent) return;
 
@@ -417,12 +419,14 @@ const getTypeColor = (): string => {
           // Collapse
           card.classList.remove('expanded');
           detailsContent.style.maxHeight = '0';
-          if (chevron) chevron.style.transform = 'rotate(0deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
+          if (expandText) expandText.textContent = 'Show Details';
         } else {
           // Expand
           card.classList.add('expanded');
           detailsContent.style.maxHeight = detailsContent.scrollHeight + 'px';
-          if (chevron) chevron.style.transform = 'rotate(180deg)';
+          if (expandIcon) expandIcon.style.transform = 'rotate(180deg)';
+          if (expandText) expandText.textContent = 'Hide Details';
         }
       });
     });
