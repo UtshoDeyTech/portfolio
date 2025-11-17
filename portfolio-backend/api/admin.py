@@ -476,6 +476,7 @@ class MediaFileAdmin(admin.ModelAdmin):
         'original_filename',
         'file_size',
         'file_size_display_field',
+        'mime_type',
         'uploaded_at',
         'updated_at',
         'file_preview_large',

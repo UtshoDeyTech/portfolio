@@ -435,7 +435,7 @@ class MediaFile(models.Model):
 
     # Unique identifier and slug
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
-    slug = models.SlugField(max_length=255, unique=True, db_index=True, help_text="Custom URL slug for accessing this file")
+    slug = models.SlugField(max_length=255, unique=True, blank=True, db_index=True, help_text="Custom URL slug for accessing this file. Leave blank to auto-generate.")
 
     # File information
     file = models.FileField(upload_to=secure_file_upload_path, help_text="Upload file (image, audio, video, document, etc.)")
