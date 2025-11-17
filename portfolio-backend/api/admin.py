@@ -520,16 +520,23 @@ class MediaFileAdmin(admin.ModelAdmin):
 
     def title_or_filename(self, obj):
         """Show title if available, otherwise show filename."""
+        if not obj or not obj.pk:
+            return '-'
         return obj.title if obj.title else obj.original_filename
     title_or_filename.short_description = "Title / Filename"
 
     def file_size_display_field(self, obj):
         """Show human-readable file size."""
+        if not obj or not obj.pk:
+            return '-'
         return obj.get_file_size_display()
     file_size_display_field.short_description = "File Size"
 
     def file_preview(self, obj):
         """Show thumbnail preview for images in list view."""
+        if not obj or not obj.pk:
+            return '-'
+
         if obj.file_type == 'image' and obj.file:
             return format_html(
                 '<img src="{}" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;" />',
@@ -549,6 +556,9 @@ class MediaFileAdmin(admin.ModelAdmin):
 
     def file_preview_large(self, obj):
         """Show larger preview in detail view."""
+        if not obj or not obj.pk:
+            return format_html('<p style="color: #666; font-style: italic;">Preview will be available after saving</p>')
+
         if obj.file_type == 'image' and obj.file:
             return format_html(
                 '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;" />',
@@ -570,6 +580,10 @@ class MediaFileAdmin(admin.ModelAdmin):
 
     def cdn_url_display(self, obj):
         """Display the CDN URL with a copy button."""
+        # Check if object has been saved (has an ID)
+        if not obj or not obj.pk:
+            return format_html('<p style="color: #666; font-style: italic;">URL will be available after saving</p>')
+
         if obj.slug:
             url = obj.get_file_url()
             # Use JavaScript to construct absolute URL and provide copy functionality
