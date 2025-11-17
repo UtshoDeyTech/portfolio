@@ -160,6 +160,7 @@ echo "Running database migrations and collecting static files..."
 sudo -u $ACTUAL_USER bash << 'DJANGO_SETUP_EOF'
 cd portfolio-backend
 source venv/bin/activate
+python manage.py makemigrations --noinput
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput --clear
 deactivate

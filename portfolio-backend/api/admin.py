@@ -16,7 +16,10 @@ from .models import (
     BlogLike,
     MediaFile,
     BackupRestore,
+    RebuildControl,
     NewsletterSubscriber,
+    RateLimitSettings,
+    RateLimitLog,
 )
 
 
@@ -938,6 +941,74 @@ class BackupRestoreAdmin(admin.ModelAdmin):
         return render(request, self.change_list_template, extra_context)
 
 
+@admin.register(RebuildControl)
+class RebuildControlAdmin(admin.ModelAdmin):
+    """
+    Custom admin for triggering frontend rebuilds.
+    This provides a simple UI with a button to rebuild the frontend.
+    """
+    change_list_template = 'admin/rebuild_control.html'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return True
+
+    def get_queryset(self, request):
+        """Return empty queryset since this model has no database table."""
+        return self.model.objects.none()
+
+    def changelist_view(self, request, extra_context=None):
+        """Override to show our custom rebuild control page."""
+        from django.shortcuts import render, redirect
+        from django.contrib import messages
+        import subprocess
+        import os
+
+        # Handle POST request (rebuild button clicked)
+        if request.method == 'POST' and 'trigger_rebuild' in request.POST:
+            script_path = "/home/ubuntu/portfolio/auto-rebuild.sh"
+
+            if not os.path.exists(script_path):
+                messages.error(request, f'⚠ Rebuild script not found at {script_path}')
+            else:
+                try:
+                    # Run rebuild script in background
+                    subprocess.Popen(
+                        ['/bin/bash', script_path],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True
+                    )
+
+                    messages.success(
+                        request,
+                        '🔄 Frontend rebuild started in background. '
+                        'It will take 30-60 seconds to complete. '
+                        'Refresh the website after a minute to see changes.'
+                    )
+                except Exception as e:
+                    messages.error(request, f'❌ Failed to start rebuild: {e}')
+
+            return redirect('admin:api_rebuildcontrol_changelist')
+
+        extra_context = extra_context or {}
+        extra_context.update({
+            'title': 'Frontend Rebuild',
+            'app_label': self.model._meta.app_label,
+            'has_add_permission': self.has_add_permission(request),
+            'has_change_permission': self.has_change_permission(request),
+            'has_delete_permission': self.has_delete_permission(request),
+            'opts': self.model._meta,
+        })
+
+        return render(request, self.change_list_template, extra_context)
+
+
 @admin.register(NewsletterSubscriber)
 class NewsletterSubscriberAdmin(admin.ModelAdmin):
     list_display = ('email', 'is_active', 'confirmed', 'subscribed_at', 'ip_address')
@@ -977,3 +1048,98 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
         emails_text = ', '.join(emails)
         self.message_user(request, f'Active emails ({len(emails)}): {emails_text}')
     export_emails.short_description = "Export active email addresses"
+
+
+@admin.register(RateLimitSettings)
+class RateLimitSettingsAdmin(admin.ModelAdmin):
+    """Admin interface for rate limiting settings."""
+    list_display = ('enabled', 'max_requests_per_route', 'max_total_requests', 'time_window_hours', 'block_duration_hours', 'updated_at')
+
+    fieldsets = (
+        ('Rate Limiting Control', {
+            'fields': ('enabled',),
+            'description': 'Enable or disable rate limiting globally.'
+        }),
+        ('Request Limits', {
+            'fields': ('max_requests_per_route', 'max_total_requests', 'time_window_hours'),
+            'description': (
+                'Configure rate limits:<br>'
+                '• <b>Max requests per route</b>: Maximum requests to a single route (e.g., /blog/post-1) within the time window<br>'
+                '• <b>Max total requests</b>: Maximum total requests across all routes within the time window<br>'
+                '• <b>Time window</b>: Period after which request counts reset'
+            )
+        }),
+        ('Block Settings', {
+            'fields': ('block_duration_hours',),
+            'description': 'How long to block users who exceed the limits.'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    readonly_fields = ('created_at', 'updated_at')
+
+    def has_add_permission(self, request):
+        # Only allow adding if no settings exist
+        try:
+            return not RateLimitSettings.objects.exists()
+        except (OperationalError, ProgrammingError):
+            return True
+
+    def has_delete_permission(self, request, obj=None):
+        # Never allow deleting the settings
+        return False
+
+
+@admin.register(RateLimitLog)
+class RateLimitLogAdmin(admin.ModelAdmin):
+    """Admin interface for viewing rate limit logs and blocked IPs."""
+    list_display = (
+        'ip_address',
+        'route',
+        'request_count',
+        'is_blocked',
+        'blocked_until',
+        'last_request_at'
+    )
+
+    list_filter = (
+        'is_blocked',
+        'blocked_at',
+        'last_request_at',
+    )
+
+    search_fields = ('ip_address', 'route')
+
+    readonly_fields = (
+        'ip_address',
+        'route',
+        'request_count',
+        'first_request_at',
+        'last_request_at',
+        'is_blocked',
+        'blocked_at',
+        'blocked_until'
+    )
+
+    ordering = ('-last_request_at',)
+
+    actions = ['unblock_ips', 'reset_counts']
+
+    def has_add_permission(self, request):
+        # Don't allow manual creation
+        return False
+
+    def unblock_ips(self, request, queryset):
+        """Unblock selected IP addresses."""
+        updated = queryset.update(is_blocked=False, blocked_at=None, blocked_until=None)
+        self.message_user(request, f'✓ {updated} IP(s) unblocked successfully.')
+    unblock_ips.short_description = "🔓 Unblock selected IPs"
+
+    def reset_counts(self, request, queryset):
+        """Reset request counts for selected IPs."""
+        updated = queryset.update(request_count=0)
+        self.message_user(request, f'✓ Request counts reset for {updated} IP(s).')
+    reset_counts.short_description = "🔄 Reset request counts"
