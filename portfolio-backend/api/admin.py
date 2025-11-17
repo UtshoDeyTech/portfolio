@@ -522,14 +522,20 @@ class MediaFileAdmin(admin.ModelAdmin):
         """Show title if available, otherwise show filename."""
         if not obj or not obj.pk:
             return '-'
-        return obj.title if obj.title else obj.original_filename
+        try:
+            return obj.title if obj.title else obj.original_filename
+        except Exception:
+            return '-'
     title_or_filename.short_description = "Title / Filename"
 
     def file_size_display_field(self, obj):
         """Show human-readable file size."""
         if not obj or not obj.pk:
             return '-'
-        return obj.get_file_size_display()
+        try:
+            return obj.get_file_size_display()
+        except Exception:
+            return '-'
     file_size_display_field.short_description = "File Size"
 
     def file_preview(self, obj):
@@ -537,21 +543,24 @@ class MediaFileAdmin(admin.ModelAdmin):
         if not obj or not obj.pk:
             return '-'
 
-        if obj.file_type == 'image' and obj.file:
-            return format_html(
-                '<img src="{}" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;" />',
-                obj.get_file_url()
-            )
-        elif obj.file_type == 'video':
-            return format_html('🎥')
-        elif obj.file_type == 'audio':
-            return format_html('🎵')
-        elif obj.file_type == 'document':
-            return format_html('📄')
-        elif obj.file_type == 'archive':
-            return format_html('📦')
-        else:
-            return format_html('📎')
+        try:
+            if obj.file_type == 'image' and obj.file:
+                return format_html(
+                    '<img src="{}" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;" />',
+                    obj.get_file_url()
+                )
+            elif obj.file_type == 'video':
+                return format_html('🎥')
+            elif obj.file_type == 'audio':
+                return format_html('🎵')
+            elif obj.file_type == 'document':
+                return format_html('📄')
+            elif obj.file_type == 'archive':
+                return format_html('📦')
+            else:
+                return format_html('📎')
+        except Exception:
+            return '-'
     file_preview.short_description = "Preview"
 
     def file_preview_large(self, obj):
@@ -559,23 +568,26 @@ class MediaFileAdmin(admin.ModelAdmin):
         if not obj or not obj.pk:
             return format_html('<p style="color: #666; font-style: italic;">Preview will be available after saving</p>')
 
-        if obj.file_type == 'image' and obj.file:
-            return format_html(
-                '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;" />',
-                obj.get_file_url()
-            )
-        elif obj.file_type == 'video' and obj.file:
-            return format_html(
-                '<video controls style="max-width: 400px; border-radius: 8px;"><source src="{}"></video>',
-                obj.get_file_url()
-            )
-        elif obj.file_type == 'audio' and obj.file:
-            return format_html(
-                '<audio controls style="width: 400px;"><source src="{}"></audio>',
-                obj.get_file_url()
-            )
-        else:
-            return format_html('<p>Preview not available for this file type.</p>')
+        try:
+            if obj.file_type == 'image' and obj.file:
+                return format_html(
+                    '<img src="{}" style="max-width: 400px; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;" />',
+                    obj.get_file_url()
+                )
+            elif obj.file_type == 'video' and obj.file:
+                return format_html(
+                    '<video controls style="max-width: 400px; border-radius: 8px;"><source src="{}"></video>',
+                    obj.get_file_url()
+                )
+            elif obj.file_type == 'audio' and obj.file:
+                return format_html(
+                    '<audio controls style="width: 400px;"><source src="{}"></audio>',
+                    obj.get_file_url()
+                )
+            else:
+                return format_html('<p>Preview not available for this file type.</p>')
+        except Exception:
+            return format_html('<p style="color: #999;">Error loading preview</p>')
     file_preview_large.short_description = "File Preview"
 
     def cdn_url_display(self, obj):
@@ -584,24 +596,27 @@ class MediaFileAdmin(admin.ModelAdmin):
         if not obj or not obj.pk:
             return format_html('<p style="color: #666; font-style: italic;">URL will be available after saving</p>')
 
-        if obj.slug:
-            url = obj.get_file_url()
-            # Use JavaScript to construct absolute URL and provide copy functionality
-            return format_html(
-                '<div style="display: flex; gap: 8px; align-items: center;">'
-                '<input type="text" id="cdn_url_{}" readonly style="width: 400px; padding: 4px; font-family: monospace;" />'
-                '<button type="button" onclick="'
-                'var input = document.getElementById(\'cdn_url_{}\'); '
-                'navigator.clipboard.writeText(input.value).then(() => {{ '
-                'alert(\'✓ URL copied: \' + input.value); '
-                '}}).catch(() => {{ alert(\'Failed to copy URL\'); }});" '
-                'style="padding: 4px 12px; cursor: pointer; background: #417690; color: white; border: none; border-radius: 4px;">'
-                'Copy</button>'
-                '</div>'
-                '<script>document.getElementById("cdn_url_{}").value = window.location.protocol + "//" + window.location.host + "{}";</script>',
-                obj.id, obj.id, obj.id, url
-            )
-        return '-'
+        try:
+            if obj.slug:
+                url = obj.get_file_url()
+                # Use JavaScript to construct absolute URL and provide copy functionality
+                return format_html(
+                    '<div style="display: flex; gap: 8px; align-items: center;">'
+                    '<input type="text" id="cdn_url_{}" readonly style="width: 400px; padding: 4px; font-family: monospace;" />'
+                    '<button type="button" onclick="'
+                    'var input = document.getElementById(\'cdn_url_{}\'); '
+                    'navigator.clipboard.writeText(input.value).then(() => {{ '
+                    'alert(\'✓ URL copied: \' + input.value); '
+                    '}}).catch(() => {{ alert(\'Failed to copy URL\'); }});" '
+                    'style="padding: 4px 12px; cursor: pointer; background: #417690; color: white; border: none; border-radius: 4px;">'
+                    'Copy</button>'
+                    '</div>'
+                    '<script>document.getElementById("cdn_url_{}").value = window.location.protocol + "//" + window.location.host + "{}";</script>',
+                    obj.id, obj.id, obj.id, url
+                )
+            return '-'
+        except Exception:
+            return format_html('<p style="color: #999;">Error generating URL</p>')
     cdn_url_display.short_description = "CDN URL"
 
     def api_url_display(self, obj):
