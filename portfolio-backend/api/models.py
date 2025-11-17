@@ -419,6 +419,18 @@ class BackupRestore(models.Model):
         app_label = 'api'
 
 
+class RebuildControl(models.Model):
+    """
+    Dummy model for Frontend Rebuild control page.
+    This model has no database table - it's just for admin UI to trigger rebuilds.
+    """
+    class Meta:
+        managed = False  # Don't create a database table
+        verbose_name = "Frontend Rebuild"
+        verbose_name_plural = "Frontend Rebuild"
+        app_label = 'api'
+
+
 class MediaFile(models.Model):
     """
     Model for storing media files (images, audio, video, documents, etc.)
@@ -559,3 +571,82 @@ class NewsletterSubscriber(models.Model):
         from django.utils import timezone
         self.unsubscribed_at = timezone.now()
         self.save()
+
+
+class RateLimitSettings(models.Model):
+    """
+    Global rate limiting settings (singleton model).
+    Control how many requests per route and total requests are allowed before blocking.
+    """
+    enabled = models.BooleanField(
+        default=True,
+        help_text="Enable or disable rate limiting globally"
+    )
+    max_requests_per_route = models.IntegerField(
+        default=50,
+        help_text="Maximum requests allowed per single route per user (default: 50)"
+    )
+    max_total_requests = models.IntegerField(
+        default=100,
+        help_text="Maximum total requests allowed across all routes per user (default: 100)"
+    )
+    time_window_hours = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=1.0,
+        help_text="Time window for rate limiting in hours - limits reset after this period (default: 1.0)"
+    )
+    block_duration_hours = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=1.0,
+        help_text="How long to block users who exceed limit, in hours (default: 1.0)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Rate Limit Settings"
+        verbose_name_plural = "Rate Limit Settings"
+
+    def __str__(self):
+        return "Rate Limit Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        """Get or create the settings instance."""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class RateLimitLog(models.Model):
+    """
+    Track rate limit violations and blocked IPs.
+    """
+    ip_address = models.GenericIPAddressField(db_index=True, help_text="IP address of the user")
+    route = models.CharField(max_length=500, db_index=True, help_text="The route/path being accessed")
+    request_count = models.IntegerField(default=1, help_text="Number of requests made")
+    first_request_at = models.DateTimeField(auto_now_add=True, help_text="When the first request was made")
+    last_request_at = models.DateTimeField(auto_now=True, help_text="When the last request was made")
+    is_blocked = models.BooleanField(default=False, db_index=True, help_text="Whether this IP is currently blocked")
+    blocked_at = models.DateTimeField(null=True, blank=True, help_text="When the IP was blocked")
+    blocked_until = models.DateTimeField(null=True, blank=True, db_index=True, help_text="When the block expires")
+
+    class Meta:
+        verbose_name = "Rate Limit Log"
+        verbose_name_plural = "Rate Limit Logs"
+        ordering = ['-last_request_at']
+        unique_together = [['ip_address', 'route']]
+        indexes = [
+            models.Index(fields=['ip_address', 'route']),
+            models.Index(fields=['is_blocked', 'blocked_until']),
+        ]
+
+    def __str__(self):
+        status = "🚫 BLOCKED" if self.is_blocked else "✓ Active"
+        return f"{self.ip_address} - {self.route} ({self.request_count} requests) - {status}"

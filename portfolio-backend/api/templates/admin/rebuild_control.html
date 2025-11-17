@@ -1,0 +1,87 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 20px;">
+    <h1 style="margin-bottom: 10px;">🔄 Frontend Rebuild</h1>
+    <p style="color: #666; margin-bottom: 30px;">Manually trigger a frontend rebuild to update the website with latest content from the database.</p>
+
+    {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div class="{% if message.tags %}alert alert-{{ message.tags }}{% endif %}"
+             style="padding: 15px; margin-bottom: 15px; border-radius: 6px;
+                    background: {% if 'success' in message.tags %}#d4edda{% elif 'error' in message.tags %}#f8d7da{% else %}#d1ecf1{% endif %};
+                    border: 1px solid {% if 'success' in message.tags %}#c3e6cb{% elif 'error' in message.tags %}#f5c6cb{% else %}#bee5eb{% endif %};
+                    color: {% if 'success' in message.tags %}#155724{% elif 'error' in message.tags %}#721c24{% else %}#0c5460{% endif %};">
+            {{ message|linebreaksbr }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="max-width: 800px;">
+        <!-- Rebuild Section -->
+        <div style="padding: 30px; background: #f8f9fa; border-radius: 12px; border: 2px solid #e9ecef;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <span style="font-size: 48px;">🔄</span>
+                <div>
+                    <h2 style="margin: 0; color: #007bff;">Rebuild Frontend</h2>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Update the website with latest content changes</p>
+                </div>
+            </div>
+
+            <div style="margin: 20px 0; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid #007bff;">
+                <h4 style="margin-top: 0; color: #333;">What happens:</h4>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #555;">
+                    <li>Fetches latest data from the database</li>
+                    <li>Rebuilds all static pages</li>
+                    <li>Updates the live website</li>
+                    <li>Takes approximately 30-60 seconds</li>
+                </ul>
+            </div>
+
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="trigger_rebuild" value="1">
+                <button type="submit"
+                        style="display: block; width: 100%; text-align: center; padding: 16px 32px; background: #007bff; color: white; text-decoration: none; border: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; transition: background 0.3s;"
+                        onmouseover="this.style.background='#0056b3'"
+                        onmouseout="this.style.background='#007bff'">
+                    🚀 Trigger Rebuild Now
+                </button>
+            </form>
+
+            <p style="margin-top: 15px; color: #6c757d; font-size: 13px; text-align: center;">
+                💡 The rebuild runs in the background. Check back in a minute to see your changes live.
+            </p>
+        </div>
+
+        <!-- Information Section -->
+        <div style="margin-top: 30px; padding: 25px; background: #e7f3ff; border-radius: 12px; border: 2px solid #b3d9ff;">
+            <h3 style="margin-top: 0; color: #004085; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">ℹ️</span> When to Rebuild
+            </h3>
+            <ul style="padding-left: 20px; line-height: 1.8; color: #004085;">
+                <li><strong>After adding new blogs:</strong> New posts need to be built into static pages</li>
+                <li><strong>After updating content:</strong> Changes to existing posts or data</li>
+                <li><strong>After changing settings:</strong> Home page data, featured posts, etc.</li>
+                <li><strong>Automatic rebuilds:</strong> The system also rebuilds every 6 hours automatically</li>
+            </ul>
+        </div>
+
+        <!-- Tips Section -->
+        <div style="margin-top: 20px; padding: 20px; background: #d1f2eb; border-radius: 12px; border: 2px solid #a2dcc8;">
+            <h3 style="margin-top: 0; color: #0c5547; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">💡</span> Tips
+            </h3>
+            <ul style="padding-left: 20px; line-height: 1.8; color: #0c5547;">
+                <li><strong>Wait before refreshing:</strong> The rebuild process takes 30-60 seconds to complete</li>
+                <li><strong>Check the logs:</strong> Rebuild logs are available at /home/ubuntu/portfolio/auto-rebuild.log</li>
+                <li><strong>Clear browser cache:</strong> Use Ctrl+Shift+R (or Cmd+Shift+R on Mac) to force refresh</li>
+                <li><strong>No need to rebuild often:</strong> Only rebuild when you want changes to go live</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
