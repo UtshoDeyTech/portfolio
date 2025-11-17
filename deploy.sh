@@ -308,8 +308,8 @@ server {
         add_header Cache-Control "public, max-age=21600, stale-while-revalidate=86400, must-revalidate";
     }
 
-    # Backend API - Dynamic endpoints (NO caching for POST/interactive endpoints)
-    # Disable caching for like/unlike and other interactive endpoints
+    # Backend API - NO caching for interactive endpoints (POST/mutations)
+    # Disable caching for: like, comments, view tracking
     location ~ ^/api/blog-posts/[^/]+/(toggle-like|increment-view|update-duration|comments)/ {
         proxy_pass http://backend;
         proxy_set_header Host $host;
@@ -318,13 +318,28 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
 
-        # NO caching for interactive endpoints
+        # NO caching - immediate updates
         add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
         add_header Pragma "no-cache";
         expires -1;
     }
 
-    # Backend API - Cache read-only GET requests only
+    # Backend API - Short cache for blog detail (admin can update anytime)
+    # Cache for only 2 minutes so admin updates show quickly
+    location ~ ^/api/blog-posts/[^/]+/?$ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+
+        # Short cache for blog detail - 2 minutes
+        # This allows admin updates to show quickly
+        add_header Cache-Control "public, max-age=120, must-revalidate";
+    }
+
+    # Backend API - Cache read-only GET requests (lists, static data)
     location /api/ {
         proxy_pass http://backend/api/;
         proxy_set_header Host $host;
@@ -333,13 +348,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
 
-        # Only cache GET requests, exclude POST/PUT/DELETE
+        # Only cache GET requests, never POST/PUT/DELETE
         set $no_cache 0;
         if ($request_method != GET) {
             set $no_cache 1;
         }
 
-        # Cache GET requests for 6 hours (read-only data)
+        # Cache GET requests for 6 hours (lists, static data)
         add_header Cache-Control "public, max-age=21600, stale-while-revalidate=43200";
 
         # Disable caching for non-GET requests

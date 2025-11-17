@@ -152,6 +152,7 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
           action,
           fingerprint,
         }),
+        cache: 'no-store', // CRITICAL: Force fresh request, never use cached response
       });
 
       if (response.ok) {
@@ -171,11 +172,31 @@ export default function BlogInteractions({ slug, initialViews, initialLikes }: B
           const updated = likedPosts.filter((s: string) => s !== slug);
           localStorage.setItem('likedPosts', JSON.stringify(updated));
         }
+
+        // CACHE BUSTER: Clear browser cache for this blog post
+        // This ensures when user refreshes, they see updated data
+        bustBlogCache();
       }
     } catch (error) {
       console.error('Error toggling like:', error);
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  // Cache busting function - clears cached blog post data
+  const bustBlogCache = () => {
+    // Clear service worker cache if exists
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        cacheNames.forEach(cacheName => {
+          caches.open(cacheName).then(cache => {
+            // Delete cached blog post detail
+            cache.delete(`${getApiUrl()}/api/blog-posts/${slug}/`);
+            cache.delete(`${getApiUrl()}/api/blog-posts/${slug}`);
+          });
+        });
+      });
     }
   };
 
