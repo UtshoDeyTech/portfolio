@@ -414,11 +414,9 @@ class BlogAdmin(admin.ModelAdmin):
         try:
             blog = get_object_or_404(Blog, pk=object_id)
 
-            # Get HTML content (prefer existing content_html)
-            content_html = blog.content_html
-
-            # If no HTML content but markdown exists, try to convert
-            if not content_html and blog.content_markdown:
+            # Convert markdown to HTML
+            content_html = ''
+            if blog.content_markdown:
                 try:
                     import markdown
                     content_html = markdown.markdown(
