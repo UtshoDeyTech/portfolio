@@ -63,6 +63,21 @@ echo ""
 echo "Step 2: Detecting Configuration"
 echo "=========================================="
 
+# Auto-detect EC2 public IP
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s --connect-timeout 2 || echo "")
+if [ -n "$TOKEN" ]; then
+    PUBLIC_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/public-ipv4 --connect-timeout 2 || echo "")
+else
+    PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 --connect-timeout 2 || echo "")
+fi
+
+if [ -n "$PUBLIC_IP" ]; then
+    echo -e "${GREEN}Public IP: $PUBLIC_IP${NC}"
+else
+    echo -e "${YELLOW}Could not detect public IP${NC}"
+    PUBLIC_IP=""
+fi
+
 # Detect domain from nginx
 if [ -f /etc/nginx/sites-available/portfolio ]; then
     DOMAIN=$(grep "server_name" /etc/nginx/sites-available/portfolio | head -1 | awk '{print $2}' | sed 's/;//')
@@ -259,105 +274,134 @@ echo "4. Quick fix (updates everything):"
 echo "   - Run: ./deploy-no-docker.sh"
 echo ""
 
-read -p "Do you want to automatically fix the configuration now? (y/n): " AUTO_FIX
+echo ""
+echo "=========================================="
+echo "APPLYING AUTOMATIC FIXES"
+echo "=========================================="
+echo ""
+echo "The script will now automatically:"
+echo "  1. Update backend configuration (CORS, ALLOWED_HOSTS)"
+echo "  2. Collect Django static files"
+echo "  3. Rebuild frontend with correct API URL"
+echo "  4. Restart all services"
+echo ""
 
-if [ "$AUTO_FIX" = "y" ] || [ "$AUTO_FIX" = "Y" ]; then
-    echo ""
-    echo "Applying automatic fixes..."
-    echo "=========================================="
+# Update backend .env
+cd "$SCRIPT_DIR/portfolio-backend"
 
-    # Update backend .env
-    cd "$SCRIPT_DIR/portfolio-backend"
+if [ -f ".env" ]; then
+    echo "Updating backend .env..."
+    cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
 
-    if [ -f ".env" ]; then
-        echo "Updating backend .env..."
-        cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+    # Build CORS and ALLOWED_HOSTS with auto-detected IPs
+    CORS_LIST="http://$DOMAIN,https://$DOMAIN,http://localhost:4321"
+    HOSTS_LIST="$DOMAIN,localhost,127.0.0.1"
 
-        # Get PUBLIC_IP
-        TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s --connect-timeout 2 || echo "")
-        if [ -n "$TOKEN" ]; then
-            PUBLIC_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/public-ipv4 --connect-timeout 2 || echo "")
-        else
-            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 --connect-timeout 2 || echo "")
-        fi
-
-        # Update CORS
-        if grep -q "CORS_ALLOWED_ORIGINS" .env; then
-            sed -i "s|CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN,http://$PUBLIC_IP,https://$PUBLIC_IP,http://localhost:4321|" .env
-        else
-            echo "CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN,http://$PUBLIC_IP,https://$PUBLIC_IP,http://localhost:4321" >> .env
-        fi
-
-        # Update ALLOWED_HOSTS
-        if grep -q "ALLOWED_HOSTS" .env; then
-            sed -i "s|ALLOWED_HOSTS=.*|ALLOWED_HOSTS=$DOMAIN,$PUBLIC_IP,localhost,127.0.0.1|" .env
-        else
-            echo "ALLOWED_HOSTS=$DOMAIN,$PUBLIC_IP,localhost,127.0.0.1" >> .env
-        fi
-
-        echo -e "${GREEN}✓ Backend .env updated${NC}"
+    if [ -n "$PUBLIC_IP" ] && [ "$PUBLIC_IP" != "$DOMAIN" ]; then
+        CORS_LIST="$CORS_LIST,http://$PUBLIC_IP,https://$PUBLIC_IP"
+        HOSTS_LIST="$HOSTS_LIST,$PUBLIC_IP"
     fi
 
-    # Collect static files
-    echo "Collecting static files..."
-    source venv/bin/activate
-    python manage.py collectstatic --noinput
-    deactivate
+    # Update CORS
+    if grep -q "CORS_ALLOWED_ORIGINS" .env; then
+        sed -i "s|CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=$CORS_LIST|" .env
+    else
+        echo "CORS_ALLOWED_ORIGINS=$CORS_LIST" >> .env
+    fi
 
-    # Fix permissions
-    chmod -R 755 static
-    echo -e "${GREEN}✓ Static files collected${NC}"
+    # Update ALLOWED_HOSTS
+    if grep -q "ALLOWED_HOSTS" .env; then
+        sed -i "s|ALLOWED_HOSTS=.*|ALLOWED_HOSTS=$HOSTS_LIST|" .env
+    else
+        echo "ALLOWED_HOSTS=$HOSTS_LIST" >> .env
+    fi
 
-    # Restart backend
-    sudo systemctl restart portfolio-backend
-    echo -e "${GREEN}✓ Backend restarted${NC}"
+    echo -e "${GREEN}✓ Backend .env updated with auto-detected IPs${NC}"
+    echo "  CORS: $CORS_LIST"
+    echo "  Hosts: $HOSTS_LIST"
+fi
 
-    # Rebuild frontend
-    cd "$SCRIPT_DIR/portfolio-frontend"
-    echo "Rebuilding frontend with API URL: $PROTOCOL://$DOMAIN"
+# Collect static files
+echo ""
+echo "Collecting static files..."
+source venv/bin/activate
+python manage.py collectstatic --noinput
+deactivate
 
-    cat > .env << EOF
+# Fix permissions
+chmod -R 755 static
+echo -e "${GREEN}✓ Static files collected${NC}"
+
+# Restart backend
+echo ""
+echo "Restarting backend service..."
+sudo systemctl restart portfolio-backend
+echo -e "${GREEN}✓ Backend restarted${NC}"
+
+# Rebuild frontend
+cd "$SCRIPT_DIR/portfolio-frontend"
+echo ""
+echo "Rebuilding frontend with API URL: $PROTOCOL://$DOMAIN"
+
+cat > .env << EOF
 PUBLIC_API_URL=$PROTOCOL://$DOMAIN
 EOF
 
-    npm run build
-    rm -f .env
+npm run build
+rm -f .env
 
-    echo -e "${GREEN}✓ Frontend rebuilt${NC}"
+echo -e "${GREEN}✓ Frontend rebuilt${NC}"
 
-    # Restart frontend
-    sudo systemctl restart portfolio-frontend
-    echo -e "${GREEN}✓ Frontend restarted${NC}"
+# Restart frontend
+echo ""
+echo "Restarting frontend service..."
+sudo systemctl restart portfolio-frontend
+echo -e "${GREEN}✓ Frontend restarted${NC}"
 
-    echo ""
-    echo "Waiting for services to start..."
-    sleep 3
+echo ""
+echo "Waiting for services to start..."
+sleep 3
 
-    # Test again
-    echo ""
-    echo "Testing API..."
-    API_TEST=$(curl -s -o /dev/null -w "%{http_code}" $PROTOCOL://$DOMAIN/api/blog-settings/ || echo "000")
+# Test again
+echo ""
+echo "Testing API..."
+API_TEST=$(curl -s -o /dev/null -w "%{http_code}" $PROTOCOL://$DOMAIN/api/blog-settings/ || echo "000")
 
-    if [ "$API_TEST" = "200" ]; then
-        echo -e "${GREEN}✓ API is working!${NC}"
-    else
-        echo -e "${RED}✗ API still not responding (HTTP $API_TEST)${NC}"
-    fi
-
-    echo ""
-    echo "=================================="
-    echo -e "${GREEN}Fix Complete!${NC}"
-    echo "=================================="
-    echo ""
-    echo "Your portfolio should now be accessible at:"
-    echo "  $PROTOCOL://$DOMAIN"
-    echo ""
-    echo "Test in your browser:"
-    echo "  1. Open: $PROTOCOL://$DOMAIN"
-    echo "  2. Open browser console (F12)"
-    echo "  3. Check for API errors in Network tab"
-    echo ""
+if [ "$API_TEST" = "200" ]; then
+    echo -e "${GREEN}✓ API is working!${NC}"
+else
+    echo -e "${RED}✗ API still not responding (HTTP $API_TEST)${NC}"
+    echo "Check logs: sudo journalctl -u portfolio-backend -n 50"
 fi
+
+# Test static files
+echo ""
+echo "Testing Django admin static files..."
+ADMIN_CSS_TEST=$(curl -s -o /dev/null -w "%{http_code}" $PROTOCOL://$DOMAIN/static/admin/css/base.css || echo "000")
+
+if [ "$ADMIN_CSS_TEST" = "200" ]; then
+    echo -e "${GREEN}✓ Django admin static files are loading!${NC}"
+else
+    echo -e "${RED}✗ Django admin static files not loading (HTTP $ADMIN_CSS_TEST)${NC}"
+    echo "Check nginx config and permissions"
+fi
+
+echo ""
+echo "=================================="
+echo -e "${GREEN}Fix Complete!${NC}"
+echo "=================================="
+echo ""
+echo "Your portfolio should now be accessible at:"
+echo "  $PROTOCOL://$DOMAIN"
+echo ""
+echo "Django admin (with styling):"
+echo "  $PROTOCOL://$DOMAIN/admin/"
+echo ""
+echo "Test in your browser:"
+echo "  1. Open: $PROTOCOL://$DOMAIN"
+echo "  2. Check if frontend data loads correctly"
+echo "  3. Visit admin panel to verify styling"
+echo ""
 
 echo ""
 echo "For detailed logs, use:"
