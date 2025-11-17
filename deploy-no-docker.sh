@@ -61,6 +61,13 @@ echo ""
 echo "Step 1: Detecting EC2 Instance Information"
 echo "=========================================="
 
+# Check if this is an existing deployment
+IS_UPDATE=false
+if systemctl list-unit-files | grep -q "portfolio-backend.service"; then
+    IS_UPDATE=true
+    echo -e "${YELLOW}Existing deployment detected - running in UPDATE mode${NC}"
+fi
+
 # Try to get EC2 metadata using IMDSv2
 echo "Attempting to detect EC2 metadata..."
 TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s --connect-timeout 2 || echo "")
@@ -83,15 +90,42 @@ fi
 echo -e "${GREEN}✓ Detected Public IP: $PUBLIC_IP${NC}"
 echo -e "${GREEN}✓ Detected Public DNS: $PUBLIC_DNS${NC}"
 
-# Ask about custom domain
-echo ""
-read -p "Do you have a custom domain? (y/n): " use_domain
-if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
-    read -p "Enter your domain name (e.g., example.com): " DOMAIN
-    SERVER_NAME="$DOMAIN"
+# Try to detect existing domain from nginx config
+if [ "$IS_UPDATE" = true ] && [ -f /etc/nginx/sites-available/portfolio ]; then
+    DETECTED_DOMAIN=$(grep "server_name" /etc/nginx/sites-available/portfolio | head -1 | awk '{print $2}' | sed 's/;//')
+    echo -e "${GREEN}Detected existing domain: $DETECTED_DOMAIN${NC}"
+    echo ""
+    read -p "Use detected domain '$DETECTED_DOMAIN'? (y/n): " use_detected
+    if [ "$use_detected" = "y" ] || [ "$use_detected" = "Y" ]; then
+        DOMAIN="$DETECTED_DOMAIN"
+        SERVER_NAME="$DOMAIN"
+        # Assume custom domain if it's not an IP address
+        if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            use_domain="n"
+        else
+            use_domain="y"
+        fi
+    else
+        read -p "Do you have a custom domain? (y/n): " use_domain
+        if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
+            read -p "Enter your domain name (e.g., example.com): " DOMAIN
+            SERVER_NAME="$DOMAIN"
+        else
+            DOMAIN="$PUBLIC_IP"
+            SERVER_NAME="$PUBLIC_IP"
+        fi
+    fi
 else
-    DOMAIN="$PUBLIC_IP"
-    SERVER_NAME="$PUBLIC_IP"
+    # Ask about custom domain
+    echo ""
+    read -p "Do you have a custom domain? (y/n): " use_domain
+    if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
+        read -p "Enter your domain name (e.g., example.com): " DOMAIN
+        SERVER_NAME="$DOMAIN"
+    else
+        DOMAIN="$PUBLIC_IP"
+        SERVER_NAME="$PUBLIC_IP"
+    fi
 fi
 
 echo ""
@@ -136,7 +170,7 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Create .env file if it doesn't exist
+# Create or update .env file
 if [ ! -f ".env" ]; then
     echo "Creating .env file..."
     SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
@@ -144,12 +178,30 @@ if [ ! -f ".env" ]; then
 SECRET_KEY=$SECRET_KEY
 DEBUG=False
 ALLOWED_HOSTS=$DOMAIN,$PUBLIC_IP,localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://$DOMAIN,http://$PUBLIC_IP,http://localhost:4321
+CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN,http://$PUBLIC_IP,https://$PUBLIC_IP,http://localhost:4321
 DATABASE_URL=sqlite:///db.sqlite3
 EOF
     echo -e "${GREEN}✓ .env file created${NC}"
 else
-    echo ".env file already exists"
+    echo "Updating existing .env file..."
+    # Backup existing .env
+    cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+
+    # Update CORS_ALLOWED_ORIGINS
+    if grep -q "CORS_ALLOWED_ORIGINS" .env; then
+        sed -i "s|CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN,http://$PUBLIC_IP,https://$PUBLIC_IP,http://localhost:4321|" .env
+    else
+        echo "CORS_ALLOWED_ORIGINS=http://$DOMAIN,https://$DOMAIN,http://$PUBLIC_IP,https://$PUBLIC_IP,http://localhost:4321" >> .env
+    fi
+
+    # Update ALLOWED_HOSTS
+    if grep -q "ALLOWED_HOSTS" .env; then
+        sed -i "s|ALLOWED_HOSTS=.*|ALLOWED_HOSTS=$DOMAIN,$PUBLIC_IP,localhost,127.0.0.1|" .env
+    else
+        echo "ALLOWED_HOSTS=$DOMAIN,$PUBLIC_IP,localhost,127.0.0.1" >> .env
+    fi
+
+    echo -e "${GREEN}✓ .env file updated${NC}"
 fi
 
 # Run migrations
@@ -173,8 +225,17 @@ cd "$SCRIPT_DIR/portfolio-frontend"
 echo "Installing npm dependencies..."
 npm install
 
+# Create .env file for frontend build
+echo "Creating frontend .env file..."
+cat > .env << EOF
+PUBLIC_API_URL=http://$DOMAIN
+EOF
+
 echo "Building Astro site..."
 npm run build
+
+# Clean up .env file after build (optional, for security)
+rm -f .env
 
 echo ""
 echo "Step 6: Setting up systemd services"
@@ -321,8 +382,64 @@ if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
     read -p "Enter email for SSL certificate: " EMAIL
     sudo certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL"
     echo -e "${GREEN}✓ SSL certificate installed${NC}"
+
+    # Rebuild frontend with HTTPS API URL
+    echo ""
+    echo "Rebuilding frontend with HTTPS API URL..."
+    cd "$SCRIPT_DIR/portfolio-frontend"
+    cat > .env << EOF
+PUBLIC_API_URL=https://$DOMAIN
+EOF
+    npm run build
+    rm -f .env
+
+    # Restart frontend service to use new build
+    sudo systemctl restart portfolio-frontend
+    echo -e "${GREEN}✓ Frontend rebuilt with HTTPS${NC}"
+
+    cd "$SCRIPT_DIR"
 else
     echo "Skipping SSL setup (no custom domain)"
+fi
+
+echo ""
+echo "Step 9: Verifying Deployment"
+echo "=========================================="
+
+sleep 3
+
+# Check backend status
+if systemctl is-active --quiet portfolio-backend; then
+    echo -e "${GREEN}✓ Backend service is running${NC}"
+else
+    echo -e "${RED}✗ Backend service failed to start${NC}"
+    echo "Check logs with: sudo journalctl -u portfolio-backend -n 50"
+fi
+
+# Check frontend status
+if systemctl is-active --quiet portfolio-frontend; then
+    echo -e "${GREEN}✓ Frontend service is running${NC}"
+else
+    echo -e "${RED}✗ Frontend service failed to start${NC}"
+    echo "Check logs with: sudo journalctl -u portfolio-frontend -n 50"
+fi
+
+# Check nginx status
+if systemctl is-active --quiet nginx; then
+    echo -e "${GREEN}✓ Nginx is running${NC}"
+else
+    echo -e "${RED}✗ Nginx is not running${NC}"
+fi
+
+# Determine protocol
+if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
+    if [ -d /etc/letsencrypt/live/$DOMAIN ]; then
+        PROTOCOL="https"
+    else
+        PROTOCOL="http"
+    fi
+else
+    PROTOCOL="http"
 fi
 
 echo ""
@@ -331,16 +448,21 @@ echo -e "${GREEN}Deployment Complete!${NC}"
 echo "=================================="
 echo ""
 echo "Your portfolio is now running at:"
-echo "  http://$DOMAIN"
-if [ "$use_domain" = "y" ] || [ "$use_domain" = "Y" ]; then
-    echo "  https://$DOMAIN"
-fi
+echo "  $PROTOCOL://$DOMAIN"
 echo ""
-echo "Service status:"
+echo "Test the API directly:"
+echo "  curl $PROTOCOL://$DOMAIN/api/blog-settings/"
+echo ""
+echo "Service management:"
 echo "  sudo systemctl status portfolio-backend"
 echo "  sudo systemctl status portfolio-frontend"
+echo "  sudo systemctl restart portfolio-backend"
+echo "  sudo systemctl restart portfolio-frontend"
 echo ""
 echo "View logs:"
-echo "  sudo journalctl -u portfolio-backend -f"
-echo "  sudo journalctl -u portfolio-frontend -f"
+echo "  Backend:  sudo journalctl -u portfolio-backend -f"
+echo "  Frontend: sudo journalctl -u portfolio-frontend -f"
+echo "  Nginx:    sudo tail -f /var/log/nginx/error.log"
+echo ""
+echo "To update this deployment in the future, simply run this script again."
 echo ""
