@@ -308,7 +308,23 @@ server {
         add_header Cache-Control "public, max-age=21600, stale-while-revalidate=86400, must-revalidate";
     }
 
-    # Backend API - Cache API responses for 6 hours
+    # Backend API - Dynamic endpoints (NO caching for POST/interactive endpoints)
+    # Disable caching for like/unlike and other interactive endpoints
+    location ~ ^/api/blog-posts/[^/]+/(toggle-like|increment-view|update-duration|comments)/ {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+
+        # NO caching for interactive endpoints
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        add_header Pragma "no-cache";
+        expires -1;
+    }
+
+    # Backend API - Cache read-only GET requests only
     location /api/ {
         proxy_pass http://backend/api/;
         proxy_set_header Host $host;
@@ -317,12 +333,18 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
 
-        # Cache API responses
+        # Only cache GET requests, exclude POST/PUT/DELETE
+        set $no_cache 0;
+        if ($request_method != GET) {
+            set $no_cache 1;
+        }
+
+        # Cache GET requests for 6 hours (read-only data)
         add_header Cache-Control "public, max-age=21600, stale-while-revalidate=43200";
 
-        # Enable proxy caching
-        proxy_cache_bypass $http_pragma $http_authorization;
-        proxy_no_cache $http_pragma $http_authorization;
+        # Disable caching for non-GET requests
+        proxy_cache_bypass $no_cache;
+        proxy_no_cache $no_cache;
     }
 
     # Django Admin
